@@ -82,10 +82,31 @@ Returner kun et JSON-objekt (gyldig JSON, uten kodeblokker eller ekstra tekst).`
     const resultsWithStatus = parsedResponse.map((sentenceObj: any, index: number) => {
       const brukerSetning = sentenceObj.bruker_setning || '';
       const riktigSetning = sentenceObj.riktig_setning || '';
-      const setningStatus = brukerSetning === riktigSetning ? 'riktig' : 'feil';
+      const setningStatus = sentenceObj.setning_status || 
+        (brukerSetning === riktigSetning ? 'riktig' : 'feil');
+      
+      // Convert forklaring arrays to strings if needed (for consistency with Azure)
+      let forklaring = Array.isArray(sentenceObj.forklaring) 
+        ? sentenceObj.forklaring.map((item: string, i: number) => `${i + 1}. ${item}`).join('\n\n')
+        : sentenceObj.forklaring;
+      
+      let forklaringMorsmaal = Array.isArray(sentenceObj.forklaring_morsmaal)
+        ? sentenceObj.forklaring_morsmaal.map((item: string, i: number) => `${i + 1}. ${item}`).join('\n\n')
+        : sentenceObj.forklaring_morsmaal;
+      
+      // If sentence is correct but no explanation, provide positive feedback
+      if (setningStatus === 'riktig' && (!forklaring || forklaring.trim() === '')) {
+        forklaring = 'Denne setningen er riktig! Godt jobbet! 🎉';
+      }
+      
+      if (setningStatus === 'riktig' && (!forklaringMorsmaal || forklaringMorsmaal.trim() === '')) {
+        forklaringMorsmaal = forklaring;
+      }
       
       return {
         ...sentenceObj,
+        forklaring,
+        forklaring_morsmaal: forklaringMorsmaal,
         setning_status: setningStatus,
         sentence_id: `${submissionId}-${index}`,
       };

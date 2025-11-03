@@ -35,6 +35,20 @@ interface SpraakhjelpperResult {
   isLocal?: boolean;
 }
 
+interface SplitSentence {
+  original: string;
+  corrected: string;
+}
+
+interface SplitSentencesResult {
+  success: boolean;
+  sentences: SplitSentence[];
+  sentenceCount: number;
+  morsmaal: string;
+  originalText: string;
+  provider?: string;
+}
+
 const languages = [
   { code: 'arabisk', name: 'Arabisk', flag: '🇸🇦' },
   { code: 'dari', name: 'Dari', flag: '🇦🇫' },
@@ -58,6 +72,11 @@ export default function SpraakhjelpperPage() {
   const [selectedLanguage, setSelectedLanguage] = useState<string>('')
   const [selectedProvider, setSelectedProvider] = useState<'openai' | 'azure'>('openai')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  // New: Split sentences state
+  const [splitResult, setSplitResult] = useState<SplitSentencesResult | null>(null)
+  const [showSplitOverview, setShowSplitOverview] = useState(false)
+  
   const [result, setResult] = useState<SpraakhjelpperResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0)
@@ -98,6 +117,7 @@ export default function SpraakhjelpperPage() {
     }
   }, [result])
 
+  // Step 1: Split text into sentences
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!inputValue.trim() || !selectedLanguage) {
@@ -107,17 +127,13 @@ export default function SpraakhjelpperPage() {
 
     setIsSubmitting(true)
     setShowForm(false)
+    setSplitResult(null)
     setResult(null)
     setError(null)
-    setCurrentSentenceIndex(0)
-    setRetryInput('')
-    setShowSummary(false)
-    setActiveTextView('user')
-    setShowCorrectAnswer(false)
 
     try {
       // Choose API endpoint based on selected provider
-      const apiEndpoint = selectedProvider === 'azure' ? '/api/spraakhjelper-azure' : '/api/spraakhjelper';
+      const apiEndpoint = selectedProvider === 'azure' ? '/api/split-sentences-azure' : '/api/split-sentences';
       
       const response = await fetch(apiEndpoint, {
         method: 'POST',
@@ -136,12 +152,64 @@ export default function SpraakhjelpperPage() {
         throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`)
       }
 
+      setSplitResult(data)
+      setShowSplitOverview(true)
+      toast.success('Teksten er delt inn i setninger!')
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'En feil oppstod'
+      setError(errorMessage)
+      toast.error(`Feil: ${errorMessage}`)
+      setShowForm(true)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Step 2: Analyze sentences
+  const handleAnalyze = async () => {
+    if (!splitResult) return
+
+    setIsSubmitting(true)
+    setShowSplitOverview(false)
+    setResult(null)
+    setError(null)
+    setCurrentSentenceIndex(0)
+    setRetryInput('')
+    setShowSummary(false)
+    setActiveTextView('user')
+    setShowCorrectAnswer(false)
+
+    try {
+      // Choose API endpoint based on selected provider
+      const apiEndpoint = selectedProvider === 'azure' ? '/api/spraakhjelper-azure' : '/api/spraakhjelper';
+      
+      // Use the corrected text from split result
+      const textToAnalyze = splitResult.sentences.map(s => s.corrected).join(' ')
+      
+      const response = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: textToAnalyze,
+          morsmaal: splitResult.morsmaal,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`)
+      }
+
       setResult(data)
       toast.success('Analyse fullført!')
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'En feil oppstod'
       setError(errorMessage)
       toast.error(`Feil: ${errorMessage}`)
+      setShowSplitOverview(true)
     } finally {
       setIsSubmitting(false)
     }
@@ -165,6 +233,8 @@ export default function SpraakhjelpperPage() {
 
   const showInputForm = () => {
     setShowForm(true)
+    setSplitResult(null)
+    setShowSplitOverview(false)
     setResult(null)
     setError(null)
     setCurrentSentenceIndex(0)
@@ -186,25 +256,45 @@ export default function SpraakhjelpperPage() {
     }
   }
 
-  const handleCheckAnswer = () => {
-    if (!retryInput.trim() || !currentSentence) {
+  const handleCheckAnswer = async () => {
+    if (!retryInput.trim() || !currentSentence || !result) {
       toast.error('Skriv inn et svar først')
       return
     }
 
     setIsCheckingAnswer(true)
 
-    const normalizedRetry = retryInput.trim().toLowerCase().replace(/[.,!?]/g, '')
-    const normalizedCorrect = currentSentence.riktig_setning.toLowerCase().replace(/[.,!?]/g, '')
-    const isCorrect = normalizedRetry === normalizedCorrect
+    try {
+      // Choose API endpoint based on selected provider
+      const apiEndpoint = selectedProvider === 'azure' ? '/api/check-sentence-azure' : '/api/check-sentence';
+      
+      const response = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sentence: retryInput.trim(),
+          correctSentence: currentSentence.riktig_setning,
+          morsmaal: result.morsmaal,
+        }),
+      })
 
-    if (result) {
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Kunne ikke sjekke svaret')
+      }
+
+      // Update the current sentence with new explanation from AI
       const updatedResults = result.results.map((sentence, index) => {
         if (index === currentSentenceIndex) {
           return {
             ...sentence,
             bruker_setning: retryInput.trim(),
-            setning_status: isCorrect ? ('riktig_2' as const) : ('feil' as const),
+            setning_status: data.er_riktig ? ('riktig_2' as const) : ('feil' as const),
+            forklaring: data.forklaring,
+            forklaring_morsmaal: data.forklaring_morsmaal,
           }
         }
         return sentence
@@ -215,20 +305,24 @@ export default function SpraakhjelpperPage() {
         results: updatedResults
       })
 
-      if (isCorrect) {
+      if (data.er_riktig) {
         toast.success('Riktig! Godt jobbet! 🎉')
         if (soundEnabled) {
           successSound.play().catch(error => console.error('Audio error:', error))
         }
+        setShowCorrectAnswer(false)
       } else {
-        toast.error('Ikke helt riktig ennå. Prøv igjen!')
+        toast.info('Se forklaringen for tips!')
         setShowCorrectAnswer(true)
       }
 
       setRetryInput('')
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'En feil oppstod'
+      toast.error(`Feil: ${errorMessage}`)
+    } finally {
+      setIsCheckingAnswer(false)
     }
-
-    setIsCheckingAnswer(false)
   }
 
   const getStatistics = () => {
@@ -358,10 +452,10 @@ export default function SpraakhjelpperPage() {
               <h1 className="text-4xl font-bold">Språkhjelperen</h1>
             </div>
             <p className="text-muted-foreground">
-              Skriv inn teksten din og velg ditt morsmål for å få hjelp med norsk.
+              Få tilbakemeldinger fra KI på teksten din.
             </p>
           </div>
-          {(result || error) && (
+          {(result || error || showSplitOverview) && (
             <Button variant="outline" onClick={showInputForm}>
               Start på nytt
             </Button>
@@ -441,7 +535,7 @@ export default function SpraakhjelpperPage() {
                   className="w-full"
                   disabled={!inputValue.trim() || !selectedLanguage || isSubmitting}
                 >
-                  {isSubmitting ? 'Analyserer...' : 'Analyser tekst'}
+                  {isSubmitting ? 'Deler inn setninger...' : 'Del inn i setninger'}
                 </Button>
               </form>
             </CardContent>
@@ -449,6 +543,51 @@ export default function SpraakhjelpperPage() {
         )}
         
         <LoadingAnimation isVisible={isSubmitting} />
+        
+        {/* Step 1 Result: Overview of split sentences */}
+        {showSplitOverview && splitResult && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Oversikt over teksten din</CardTitle>
+                  <CardDescription>
+                    Teksten er delt inn i {splitResult.sentenceCount} {splitResult.sentenceCount === 1 ? 'setning' : 'setninger'}
+                  </CardDescription>
+                </div>
+                <Button variant="outline" onClick={showInputForm}>
+                  Tilbake
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="font-semibold mb-3 text-blue-900">Setninger funnet:</h3>
+                  <ol className="space-y-2">
+                    {splitResult.sentences.map((sentence, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <span className="font-semibold text-blue-700 mt-0.5">{index + 1}.</span>
+                        <span className="flex-1">{sentence.corrected}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+                
+                <div className="flex justify-end items-center pt-4 border-t">
+                  <Button 
+                    onClick={handleAnalyze}
+                    disabled={isSubmitting}
+                    size="lg"
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {isSubmitting ? 'Analyserer...' : 'Analyser setninger'}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         
         {error && (
           <Card className="border-red-300 bg-red-50">
