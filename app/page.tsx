@@ -88,7 +88,6 @@ export default function SpraakhjelpperPage() {
   const [activeTextView, setActiveTextView] = useState<'original' | 'user'>('user')
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [showConfetti, setShowConfetti] = useState(false)
-  const [showCorrectAnswer, setShowCorrectAnswer] = useState(false)
 
   const successSound = useAudio('/audio/success-fanfare.mp3', {
     volume: 0.7,
@@ -177,7 +176,6 @@ export default function SpraakhjelpperPage() {
     setRetryInput('')
     setShowSummary(false)
     setActiveTextView('user')
-    setShowCorrectAnswer(false)
 
     try {
       // Choose API endpoint based on selected provider
@@ -219,7 +217,6 @@ export default function SpraakhjelpperPage() {
     if (result && currentSentenceIndex < result.results.length - 1) {
       setCurrentSentenceIndex(currentSentenceIndex + 1)
       setRetryInput('')
-      setShowCorrectAnswer(false)
     }
   }
 
@@ -227,7 +224,6 @@ export default function SpraakhjelpperPage() {
     if (currentSentenceIndex > 0) {
       setCurrentSentenceIndex(currentSentenceIndex - 1)
       setRetryInput('')
-      setShowCorrectAnswer(false)
     }
   }
 
@@ -241,7 +237,6 @@ export default function SpraakhjelpperPage() {
     setRetryInput('')
     setShowSummary(false)
     setActiveTextView('user')
-    setShowCorrectAnswer(false)
     localStorage.removeItem('spraakhjelper-result')
   }
 
@@ -310,10 +305,8 @@ export default function SpraakhjelpperPage() {
         if (soundEnabled) {
           successSound.play().catch(error => console.error('Audio error:', error))
         }
-        setShowCorrectAnswer(false)
       } else {
         toast.info('Se forklaringen for tips!')
-        setShowCorrectAnswer(true)
       }
 
       setRetryInput('')
@@ -600,31 +593,10 @@ export default function SpraakhjelpperPage() {
         
         {result && result.results && result.results.length > 0 && !showSummary && currentSentence && (
           <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Tilbakemelding på teksten din</CardTitle>
-                  <CardDescription>Bla gjennom setningene dine</CardDescription>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSoundEnabled(!soundEnabled)}
-                    className="h-8 w-8 p-0"
-                  >
-                    {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                  </Button>
-                  <Badge variant="outline">
-                    {currentSentenceIndex + 1} av {result.results.length}
-                  </Badge>
-                </div>
-              </div>
-            </CardHeader>
             <CardContent>
-              <div className="space-y-6">
+              <div className="space-y-6 pt-4">
                 <div>
-                  <p className="text-lg font-semibold mb-2">Din setning:</p>
+                  <p className="text-lg font-semibold mb-1">Din setning:</p>
                   <div className={`text-sm rounded-lg p-3 ${
                     currentSentence.setning_status === 'feil' 
                       ? 'bg-red-50 border border-red-200' 
@@ -634,29 +606,30 @@ export default function SpraakhjelpperPage() {
                   </div>
                 </div>
                 
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">Forslag til forbedringer:</h3>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant={showNorwegianExplanation ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setShowNorwegianExplanation(true)}
-                    >
-                      <Languages className="h-3 w-3 mr-1" />
-                      Norsk
-                    </Button>
-                    <Button
-                      variant={!showNorwegianExplanation ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setShowNorwegianExplanation(false)}
-                    >
-                      <Languages className="h-3 w-3 mr-1" />
-                      {result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.name : 'Morsmål'}
-                    </Button>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Forslag til forbedringer:</h3>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant={showNorwegianExplanation ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setShowNorwegianExplanation(true)}
+                      >
+                        <Languages className="h-3 w-3 mr-1" />
+                        Norsk
+                      </Button>
+                      <Button
+                        variant={!showNorwegianExplanation ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setShowNorwegianExplanation(false)}
+                      >
+                        <Languages className="h-3 w-3 mr-1" />
+                        {result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.name : 'Morsmål'}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                
-                <div className={`text-sm rounded-lg p-4 ${
+                  
+                  <div className={`text-sm rounded-lg p-4 ${
                   showNorwegianExplanation ? 'bg-blue-50 border border-blue-200' : 'bg-purple-50 border border-purple-200'
                 }`}>
                   <div className="space-y-2">
@@ -683,13 +656,17 @@ export default function SpraakhjelpperPage() {
                       ))}
                   </div>
                 </div>
+                </div>
                 
                 {currentSentence.setning_status === 'feil' && (
                   <div className="p-4 bg-gray-50 border rounded-lg">
-                    <h4 className="text-lg font-semibold mb-3">
+                    <h4 className="text-lg font-semibold mb-1">
                       Kan du prøve å skrive setningen på nytt?
                     </h4>
-                    <div className="space-y-3">
+                    <p className="text-sm text-gray-600 mb-3">
+                      Husk å sette punktum på slutten av setningen!
+                    </p>
+                    <div className="flex gap-2">
                       <Input
                         placeholder="Skriv setningen din på nytt her..."
                         value={retryInput}
@@ -701,50 +678,29 @@ export default function SpraakhjelpperPage() {
                           }
                         }}
                       />
-                      
-                      {showCorrectAnswer && (
-                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                          <p className="text-sm font-semibold text-green-800 mb-1">Riktig svar:</p>
-                          <p className="text-sm text-green-700">{currentSentence.riktig_setning}</p>
-                        </div>
-                      )}
-                      
-                      <div className="flex justify-between">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setRetryInput('')
-                            setShowCorrectAnswer(false)
-                          }}
-                          disabled={!retryInput.trim()}
-                        >
-                          Tøm
-                        </Button>
-                        <div className="flex gap-2">
-                          {!showCorrectAnswer && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setShowCorrectAnswer(true)}
-                            >
-                              Vis riktig svar
-                            </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            onClick={handleCheckAnswer}
-                            disabled={!retryInput.trim() || isCheckingAnswer}
-                          >
-                            {isCheckingAnswer ? 'Sjekker...' : 'Sjekk svar'}
-                          </Button>
-                        </div>
-                      </div>
+                      <Button
+                        size="sm"
+                        onClick={handleCheckAnswer}
+                        disabled={!retryInput.trim() || isCheckingAnswer}
+                        className="whitespace-nowrap"
+                      >
+                        {isCheckingAnswer ? 'Sjekker...' : 'Sjekk svar'}
+                      </Button>
                     </div>
                   </div>
                 )}
                 
-                <div className="flex items-center justify-between pt-4 border-t">
+                {/* Progress bar */}
+                <div className="w-full pb-6">
+                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-blue-500 transition-all duration-300 ease-out"
+                      style={{ width: `${((currentSentenceIndex + 1) / result.results.length) * 100}%` }}
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between">
                   <Button
                     variant="outline"
                     onClick={goToPrevious}
@@ -788,10 +744,7 @@ export default function SpraakhjelpperPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Sammendrag av språkanalysen</CardTitle>
-                  <CardDescription>Oversikt over resultatene</CardDescription>
-                </div>
+                <h3 className="text-lg font-semibold">Sammendrag</h3>
                 <Button variant="outline" onClick={() => setShowSummary(false)}>
                   Tilbake til setninger
                 </Button>
@@ -828,7 +781,7 @@ export default function SpraakhjelpperPage() {
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-semibold mb-3">{getActiveTextData().title}</h3>
+                    <h3 className="text-lg font-semibold mb-1">{getActiveTextData().title}</h3>
                     <div className={`border rounded-lg p-4 ${getActiveTextData().bgColor}`}>
                       <p className="text-sm leading-relaxed">{getActiveTextData().text}</p>
                     </div>
@@ -839,7 +792,7 @@ export default function SpraakhjelpperPage() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     <h3 className="text-lg font-semibold">Statistikk</h3>
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
                       <div className="flex justify-between">
@@ -867,7 +820,7 @@ export default function SpraakhjelpperPage() {
                     </div>
                   </div>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     <h3 className="text-lg font-semibold">Resultat</h3>
                     <div className="bg-gray-50 border rounded-lg p-4 flex flex-col items-center">
                       <PieChart />

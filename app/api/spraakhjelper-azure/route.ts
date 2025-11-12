@@ -13,6 +13,150 @@ const AZURE_API_KEY = process.env.AZURE_OPENAI_API_KEY!;
 const AZURE_DEPLOYMENT_NAME = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || 'gpt-4o';
 const AZURE_API_VERSION = process.env.AZURE_OPENAI_API_VERSION || '2024-08-01-preview';
 
+// Transfer errors per language (detailed descriptions)
+const TRANSFER_ERRORS: Record<string, string> = {
+  'arabisk': `Arabisk:
+  • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
+  • Norske vokaler, spesielt «u», «y» og «ø»
+  • Preteritum vs. perfektum i verb-bøying
+  • Substantiv-bøying, bl.a. bestemt vs. ubestemt form`,
+  
+  'dari': `Dari / Farsi / Persisk:
+  • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
+  • «Det»-setninger, altså setninger der «det» fungerer som formelt subjekt
+  • Norske vokaler, spesielt «u», «y» og «ø»
+  • Ord med mange ulike konsonanter etter hverandre
+  • Plassering av ordet «ikke»
+  • Substantiv-bøying, bl.a. bestemt vs. ubestemt form`,
+  
+  'farsi': `Dari / Farsi / Persisk:
+  • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
+  • «Det»-setninger, altså setninger der «det» fungerer som formelt subjekt
+  • Norske vokaler, spesielt «u», «y» og «ø»
+  • Ord med mange ulike konsonanter etter hverandre
+  • Plassering av ordet «ikke»
+  • Substantiv-bøying, bl.a. bestemt vs. ubestemt form`,
+  
+  'persisk': `Dari / Farsi / Persisk:
+  • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
+  • «Det»-setninger, altså setninger der «det» fungerer som formelt subjekt
+  • Norske vokaler, spesielt «u», «y» og «ø»
+  • Ord med mange ulike konsonanter etter hverandre
+  • Plassering av ordet «ikke»
+  • Substantiv-bøying, bl.a. bestemt vs. ubestemt form`,
+  
+  'kurmandsji': `Kurmandsji (kurdisk):
+  • Bestemt artikkel (determinativ)
+  • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
+  • «Det»-setninger, altså setninger der «det» fungerer som formelt subjekt
+  • Norske vokaler, spesielt «u», «y» og «ø»
+  • Ord med mange ulike konsonanter etter hverandre
+  • Plassering av ordet «ikke»`,
+  
+  'kurdisk': `Kurmandsji (kurdisk):
+  • Bestemt artikkel (determinativ)
+  • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
+  • «Det»-setninger, altså setninger der «det» fungerer som formelt subjekt
+  • Norske vokaler, spesielt «u», «y» og «ø»
+  • Ord med mange ulike konsonanter etter hverandre
+  • Plassering av ordet «ikke»`,
+  
+  'mandarin': `Mandarin (kinesisk):
+  • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
+  • Ord med mange ulike konsonanter etter hverandre
+  • Substantiv-bøying
+  • Verb-bøying`,
+  
+  'kinesisk': `Mandarin (kinesisk):
+  • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
+  • Ord med mange ulike konsonanter etter hverandre
+  • Substantiv-bøying
+  • Verb-bøying`,
+  
+  'polsk': `Polsk:
+  • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
+  • Norske vokaler, spesielt «u», «y» og «ø»
+  • Preteritum vs. perfektum i verb-bøying
+  • Pronomen
+  • Substantiv-bøying, bl.a. bestemt vs. ubestemt form`,
+  
+  'portugisisk': `Portugisisk:
+  • Bestemt artikkel (determinativ)
+  • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
+  • Gradbøying og plassering av adjektiv
+  • Konsonanten «s» i opptakt (som på portugisisk uttales «es», noe som kan føre til at eleven feilaktig skriver «es» i ord med «s» som opptakt)
+  • Konsonantene «h» og «r» («h» er alltid stum på portugisisk, og kan derfor feilaktig få bortfall i skrift)
+  • Korrekt ubestemt artikkel (en, ett) foran substantiv i ubestemt form entall
+  • Negasjon
+  • Sammensatte substantiv
+  • Spørresetninger`,
+  
+  'russisk': `Russisk / Ukrainsk:
+  • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
+  • Korrekt ubestemt artikkel (en, ett) foran substantiv i ubestemt form entall
+  • Norske vokaler, spesielt «u», «y» og «ø»
+  • Preteritum vs. perfektum i verb-bøying
+  • Substantiv-bøying, bl.a. bestemt vs. ubestemt form`,
+  
+  'ukrainsk': `Russisk / Ukrainsk:
+  • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
+  • Korrekt ubestemt artikkel (en, ett) foran substantiv i ubestemt form entall
+  • Norske vokaler, spesielt «u», «y» og «ø»
+  • Preteritum vs. perfektum i verb-bøying
+  • Substantiv-bøying, bl.a. bestemt vs. ubestemt form`,
+  
+  'somali': `Somali:
+  • Bestemt artikkel (determinativ)
+  • De norske konsonantene «p», «v» og «kj»
+  • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
+  • Den norske vokalen «y»
+  • Kjønn på substantiv
+  • Preposisjoner`,
+  
+  'swahili': `Swahili:
+  • Adjektiv
+  • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
+  • Diftonger
+  • Ord med mange ulike konsonanter etter hverandre
+  • Pronomen
+  • Substantiv-bøying
+  • Verb-bøying`,
+  
+  'thai': `Thai:
+  • De norske konsonantene «l» og «r»
+  • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
+  • Norske vokaler, spesielt «u», «y» og «ø»
+  • Ord med mange ulike konsonanter etter hverandre
+  • Subjektstvang, altså at en setning alltid skal inneholde subjekt
+  • Substantiv-bøying
+  • Verb-bøying`,
+  
+  'tigrinja': `Tigrinja:
+  • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
+  • «Det»-setninger, altså setninger der «det» fungerer som formelt subjekt
+  • Norske vokaler, spesielt «u», «y» og «ø»
+  • Ord med mange ulike konsonanter etter hverandre
+  • Preteritum vs. perfektum i verb-bøying
+  • Substantiv-bøying, bl.a. bestemt vs. ubestemt form`,
+  
+  'tyrkisk': `Tyrkisk:
+  • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
+  • Den norske vokalen «y»
+  • Ord med mange ulike konsonanter etter hverandre
+  • Pronomen
+  • Substantiv-bøying, bl.a. bestemt vs. ubestemt form
+  • Å lage leddsetninger`,
+  
+  'vietnamesisk': `Vietnamesisk:
+  • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
+  • Konsonantene «f», «j», «w» og «z»
+  • Passive konstruksjoner (som f.eks. «bilen blir kjørt»)
+  • Sammensatte substantiv
+  • Stavelsene «kj», «sy» og «øy»
+  • Substantiv-bøying, bl.a. bestemt vs. ubestemt form
+  • Verb-bøying, spesielt i fortid`
+};
+
 export async function POST(req: Request) {
   try {
     // Validate Azure configuration
@@ -27,151 +171,115 @@ export async function POST(req: Request) {
     console.log('Processing spraakhjelper request for language:', morsmaal);
     console.log('Using Azure OpenAI endpoint:', AZURE_ENDPOINT);
 
-    // Build system prompt
-    const systemPrompt = `Du er en hjelpsom språkveileder for elever som lærer norsk. Skriv på bokmål og ${morsmaal}. Bruk enkelt, tydelig og muntlig språk – som til en venn – men med riktig grammatikk. Skriv korte setninger og forklar én ting om gangen. Unngå vanskelige ord og faguttrykk. Bruk bare enkle grammatikkord som «verb» eller «ordstilling», og forklar dem første gang du bruker dem. Når du forklarer feil, bruk små eksempler for å illustrere hva eleven skal gjøre for å forbedre setningen sin. Skriv alltid vennlig og oppmuntrende.  Vær særlig oppmerksom på vanlige utfordringer eller overføringsfeil for elever med ${morsmaal} som morsmål.
-##Oppgave
-Svar med kun én JSON-struktur på toppnivå – et array hvor hvert objekt representerer én setning og har nøyaktig disse feltene i denne rekkefølgen:
-  - "bruker_setning": Den opprinnelige setningen slik eleven skrev den. Legg til punktum dersom det ikke er noe punktum i setningen.
-  - "riktig_setning": Setningen omskrevet korrekt. Legg til punktum dersom det ikke er noe punktum i setningen. Start hver setning med stor bokstav.
-  - "forklaring": Punktvis forklaring (bruk tall) PÅ NORSK hva i elevens setning som eventuelt er galt og hvorfor – på en enkel og tydelig måte. Start hvert punkt med uthevet tekst som beskriver feilen. Dersom feil i setningen kan knyttes til vanlige utfordringer eller overføringsfeil, skal du alltid forklare dette eksplisitt. Forklar på en enkel måte hvordan strukturer eller vaner fra ${morsmaal} kan ha ført til denne feilen på norsk, gjerne med et lite eksempel fra ${morsmaal}. Du skal ALDRI skrive den riktige setningen riktige i forklaringen, men kun hva eleven må gjøre for å forbedre setningen sin.
-  - "forklaring_morsmaal": Den samme forklaringen oversatt til ${morsmaal}.
-  - "setning_status": Sett status til riktig dersom setningen er riktig skrevet. Du skal ignorere feil i tegnsetting. Du skal godta både a-endelse og en-endelse i hunkjønnssubstantiv (f.eks. «døra» og «døren») og både a-endelse og et-endelse i verb i preteritum (f.eks. «snakka» og «snakket»). 
+    // Get transfer errors for this specific language
+    const transferErrors = TRANSFER_ERRORS[morsmaal] || '';
+
+    // Build system prompt (v5)
+    const systemPrompt = `Du er en hjelpsom språkveileder for elever som lærer norsk. Skriv på bokmål og ${morsmaal}. Bruk enkelt, tydelig og muntlig språk – som til en venn – men med riktig grammatikk. Skriv korte setninger og forklar én ting om gangen. Bruk bare enkle grammatikkord som «verb» eller «ordstilling». Dersom du bruker et grammatikkbegrep i en forklaring, forklar det kort hver gang, eller så lenge det ikke er brukt tidligere i denne samtalen.
+Unngå vanskelige ord og faguttrykk. Når du forklarer feil, bruk små eksempler for å illustrere hva eleven skal gjøre for å forbedre setningen sin. Vær særlig oppmerksom på vanlige utfordringer eller overføringsfeil for elever med ${morsmaal} som morsmål.
+
+##Fremgangsmåte
+Analyser hver setning og gi tilbakemelding:
+  - Punktvis forklaring (bruk tall) PÅ NORSK hva i elevens setning som eventuelt er galt og hvorfor – på en enkel og tydelig måte. Lag ett punkt for hver feil. Maksimalt 40 ord per punkt. Start hvert punkt med uthevet tekst som beskriver feilen. Dersom feil i setningen kan knyttes til vanlige utfordringer eller overføringsfeil${transferErrors ? ' (se listen under)' : ''}, skal du alltid forklare dette eksplisitt. Dersom det er gjort en overføringsfeil - Forklar på en enkel måte hvordan strukturer eller vaner fra ${morsmaal} kan ha ført til denne feilen på norsk, gjerne med et lite eksempel. Du skal ALDRI skrive den riktige setningen i forklaringen, men kun hva eleven må gjøre for å forbedre setningen sin. 
+Ikke kommenter forskjeller i dialekt- eller stilnivå som ikke påvirker grammatisk riktighet.
+
 ##Viktige presiseringer:
 - Beskriv hva eleven skal gjøre for å forbedre setningen sin, ikke hva eleven ikke skal gjøre.
+- Du kan skrive delene av setningen som er feil i forklaringen, men ALDRI hele den riktige setningen.
+- Bare kommenter overføringsfeil som er på listen under.
 - Ikke bruk vanskelige ord som «spesifikk», «funksjon», «konstruksjon», «korrekthet», «presist», «formulering», «komplekst» og lignende. 
-- Bruk bare helt nødvendige grammatikkbegreper som «subjekt», «verb», «ordstilling» og lignende. Hvis du må bruke et grammatisk begrep som «subjekt», «verb» eller «ordstilling», så forklar det med enkle ord første gang du bruker det. Ikke bruk avanserte grammatiske ord som «konjunksjon», «subjunksjon», «refleksivt possessivt pronomen», «perfektum partisipp» og lignende, med mindre du også forklarer dem med enkle ord. 
-- Når du forklarer hvorfor noe er feil, bruk eksempler: «Du skrev: 'Hun går til skole.' Det er nesten riktig. Men vi sier 'til skolen'.» 
+- Bruk bare helt nødvendige grammatikkbegreper som «subjekt», «verb», «ordstilling» og lignende. Hvis du må bruke et grammatisk begrep som «subjekt», «verb» eller «ordstilling», så forklar det med enkle ord første gang du bruker det.
 - Ikke skriv ting som: «Denne konstruksjonen er ukorrekt». Skriv heller: «Dette sier vi ikke sånn på norsk. Her må vi gjøre ... i stedet.»
-- Godta variasjoner i bokmål: døra/døren, snakka/snakket, han/ham, samt konservative, moderate og radikale former.
-##Overføringsfeil
-Arabisk:
-  • V2-regelen (verbet på andre plass)
-  • Vokaler: u, y, ø
-  • Preteritum vs. perfektum
-  • Substantiv: bestemt/ubestemt form
-Dari / Farsi / Persisk:
-  • V2-regelen
-  • «Det»-setninger
-  • Vokaler: u, y, ø
-  • Mange konsonanter etter hverandre
-  • Plassering av «ikke»
-  • Substantiv: bestemt/ubestemt form
-Kurmandsji (kurdisk):
-  • Bestemt artikkel
-  • V2-regelen
-  • «Det»-setninger
-  • Vokaler: u, y, ø
-  • Mange konsonanter etter hverandre
-  • Plassering av «ikke»
-Mandarin (kinesisk):
-  • V2-regelen
-  • Mange konsonanter etter hverandre
-  • Substantiv- og verbbøying
-Polsk:
-  • V2-regelen
-  • Vokaler: u, y, ø
-  • Preteritum vs. perfektum
-  • Pronomen
-  • Substantiv: bestemt/ubestemt form
-Portugisisk:
-  • Bestemt artikkel
-  • V2-regelen
-  • Adjektiv (gradbøying og plassering)
-  • Konsonanter: s, h, r
-  • Ubestemt artikkel (en, ett)
-  • Negasjon
-  • Sammensatte substantiv og spørresetninger
-Russisk / Ukrainsk:
-  • V2-regelen
-  • Ubestemt artikkel
-  • Vokaler: u, y, ø
-  • Preteritum vs. perfektum
-  • Substantiv: bestemt/ubestemt form
-Somali:
-  • Bestemt artikkel
-  • Konsonanter: p, v, kj
-  • V2-regelen
-  • Vokalen y
-  • Kjønn på substantiv
-  • Preposisjoner
-Swahili:
-  • Adjektiv
-  • V2-regelen
-  • Diftonger
-  • Mange konsonanter etter hverandre
-  • Pronomen
-  • Substantiv- og verbbøying
-Thai:
-  • Konsonanter: l og r
-  • V2-regelen
-  • Vokaler: u, y, ø
-  • Mange konsonanter etter hverandre
-  • Subjektstvang
-  • Substantiv- og verbbøying
-Tigrinja:
-  • V2-regelen
-  • «Det»-setninger
-  • Vokaler: u, y, ø
-  • Mange konsonanter etter hverandre
-  • Preteritum vs. perfektum
-  • Substantiv: bestemt/ubestemt form
-Tyrkisk:
-  • V2-regelen
-  • Vokalen y
-  • Mange konsonanter etter hverandre
-  • Pronomen
-  • Substantiv: bestemt/ubestemt form
-  • Leddsetninger
-Vietnamesisk:
-  • V2-regelen
-  • Konsonanter: f, j, w, z
-  • Passive setninger
-  • Sammensatte substantiv
-  • Stavelsene kj, sy, øy
-  • Substantiv: bestemt/ubestemt form
-  • Verbbøying (fortid)
 
-##Eksempler på respons(KUN FOR SYSTEMET – IKKE VIS TIL ELEVEN)
+${transferErrors ? `##Vanlige overføringsfeil fra ${morsmaal}:\n${transferErrors}\n` : ''}
+
+##Eksempler på respons (KUN FOR SYSTEMET – IKKE VIS TIL ELEVEN)
 Følgende eksempler viser nøyaktig format på svaret. I faktiske svar skal modellen levere KUN JSON (ingen kodeblokker, ingen ekstra tekst).
-Eksempel 1:
- [
-     {
-       "bruker_setning": "hu går til skole.",
-       "riktig_setning": "Hun går til skolen.",
-       "forklaring": "1. **Hun:** På norsk skriver vi *hun* i stedet for *hu*.\\n 2. **Skolen:** Du skrev *til skole*. Det er nesten riktig, men vi sier *til skolen*.",
-       "forklaring_morsmaal": "...oversatt til ${morsmaal}",
-       "setning_status": "feil"
-     }
-   ]
-Eksempel 2:
-    [
-     {
-       "bruker_setning": "Om sommeren jeg reiser Thailand på ferie.",
-       "riktig_setning": "Om sommeren reiser jeg til Thailand på ferie.",
-       "forklaring": "1. **Jeg reiser:** Verbet *reiser* skal stå på plass nummer to i setningen. Dette følger V2-regelen, som sier at verbet skal stå i den andre posisjonen i setningen. \\n 2. **Til Thailand:** Husk å ta med preposisjonen *til* for å vise hvor du reiser: *til Thailand*.",
-       "forklaring_morsmaal": "...oversatt til ${morsmaal}",
-       "setning_status": "feil"
-     }
-   ]
-Eksempel 3:
-    [
-     {
-       "bruker_setning": "Jeg gifta meg i sommer",
-       "riktig_setning": "Jeg gifta meg i sommer.",
-       "forklaring": "Flott! Denne setningen er helt riktig!",
-       "forklaring_morsmaal": "...oversatt til ${morsmaal}",
-       "setning_status": "riktig"
-     }
-   ]
 
-###OBS!
-Returner kun et JSON-objekt (gyldig JSON, uten kodeblokker eller ekstra tekst).`;
+Eksempel 1:
+{
+  "sentences": [
+    {
+      "bruker_setning": "Hu går til skole.",
+      "riktig_setning": "Hun går til skolen.",
+      "forklaring": "1. **Hu -> Hun:** På norsk skriver vi «hun» i stedet for «hu».\\n 2. **Skole -> Skolen:** Du skrev: «går til skole». Det er nesten riktig. Men vi sier «til skolen».",
+      "forklaring_morsmaal": "...oversatt til ${morsmaal}",
+      "setning_status": "feil"
+    }
+  ]
+}
+
+Eksempel 2:
+{
+  "sentences": [
+    {
+      "bruker_setning": "Om sommeren jeg reiser Thailand på ferie.",
+      "riktig_setning": "Om sommeren reiser jeg til Thailand på ferie.",
+      "forklaring": "1. **jeg reiser -> reiser jeg:** Verbet «reiser» skal stå på plass nummer to i setningen. Dette følger V2-regelen, som sier at verbet skal stå i den andre posisjonen i setningen.\\n 2. **Til Thailand -> til Thailand:** Husk å ta med preposisjonen «til» for å vise hvor du reiser: «til Thailand».",
+      "forklaring_morsmaal": "...oversatt til ${morsmaal}",
+      "setning_status": "feil"
+    }
+  ]
+}
+
+Eksempel 3:
+{
+  "sentences": [
+    {
+      "bruker_setning": "Jeg gifta meg i sommer.",
+      "riktig_setning": "Jeg gifta meg i sommer.",
+      "forklaring": "Flott! Denne setningen er helt riktig!",
+      "forklaring_morsmaal": "...oversatt til ${morsmaal}",
+      "setning_status": "riktig"
+    }
+  ]
+}`;
+
+    // Define JSON Schema for structured output (Azure requires object at top level)
+    const responseSchema = {
+      type: "object",
+      properties: {
+        sentences: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              bruker_setning: {
+                type: "string",
+                description: "Den opprinnelige setningen slik eleven skrev den."
+              },
+              riktig_setning: {
+                type: "string",
+                description: "Setningen omskrevet korrekt."
+              },
+              forklaring: {
+                type: "string",
+                description: "Punktvis forklaring på norsk hva som er galt og hvorfor."
+              },
+              forklaring_morsmaal: {
+                type: "string",
+                description: `Forklaringen oversatt til ${morsmaal}.`
+              },
+              setning_status: {
+                type: "string",
+                enum: ["riktig", "feil"],
+                description: "Status 'riktig' hvis setningen er korrekt (ignorer tegnsetting). Godta a/en-endelser og a/et-endelser i verb."
+              }
+            },
+            required: ["bruker_setning", "riktig_setning", "forklaring", "forklaring_morsmaal", "setning_status"],
+            additionalProperties: false
+          }
+        }
+      },
+      required: ["sentences"],
+      additionalProperties: false
+    };
 
     // Build Azure OpenAI URL
     const azureUrl = `${AZURE_ENDPOINT}/openai/deployments/${AZURE_DEPLOYMENT_NAME}/chat/completions?api-version=${AZURE_API_VERSION}`;
 
-    // Make API call to Azure OpenAI
-    console.log('Calling Azure OpenAI...');
+    // Make API call to Azure OpenAI with structured output
+    console.log('Calling Azure OpenAI with structured output...');
     const response = await fetch(azureUrl, {
       method: 'POST',
       headers: {
@@ -180,10 +288,19 @@ Returner kun et JSON-objekt (gyldig JSON, uten kodeblokker eller ekstra tekst).`
       },
       body: JSON.stringify({
         messages: [
-          { role: 'user', content: `${systemPrompt}\n\nTekst fra eleven: ${text}` }
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Tekst fra eleven: ${text}` }
         ],
         temperature: 0,
         max_tokens: 4000,
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "sentence_analysis",
+            strict: true,
+            schema: responseSchema
+          }
+        }
       }),
     });
 
@@ -200,58 +317,35 @@ Returner kun et JSON-objekt (gyldig JSON, uten kodeblokker eller ekstra tekst).`
       throw new Error('Empty response from Azure OpenAI');
     }
 
-    console.log('Received response from Azure OpenAI');
+    console.log('Received response from Azure OpenAI (structured output)');
 
-    // Parse JSON response from AI
-    let parsedResponse;
-    try {
-      const cleanedResponse = aiResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
-      parsedResponse = JSON.parse(cleanedResponse);
-    } catch (parseError) {
-      console.error('Failed to parse AI response as JSON:', parseError);
-      throw new Error('Invalid JSON response from AI model');
-    }
-
-    // Validate that the response is an array
-    if (!Array.isArray(parsedResponse)) {
-      throw new Error('AI response is not an array of sentence objects');
-    }
+    // Parse JSON response - guaranteed valid by JSON Schema
+    const parsedResponse = JSON.parse(aiResponse);
+    
+    // Extract sentences array from the wrapper object
+    const sentences = parsedResponse.sentences || [];
 
     // Generate a temporary submission ID for client-side tracking
     const submissionId = `azure-${Date.now()}-${crypto.randomUUID()}`;
 
-    // Add setning_status to each sentence (use AI's status if provided, otherwise compute it)
-    const resultsWithStatus = parsedResponse.map((sentenceObj: any, index: number) => {
-      const brukerSetning = sentenceObj.bruker_setning || '';
-      const riktigSetning = sentenceObj.riktig_setning || '';
-      
-      // Use AI's setning_status if provided, otherwise compute it
-      const setningStatus = sentenceObj.setning_status || 
-        (brukerSetning === riktigSetning ? 'riktig' : 'feil');
-      
-      // Convert forklaring arrays to strings if needed
-      let forklaring = Array.isArray(sentenceObj.forklaring) 
-        ? sentenceObj.forklaring.map((item: string, i: number) => `${i + 1}. ${item}`).join('\n\n')
-        : sentenceObj.forklaring;
-      
-      let forklaringMorsmaal = Array.isArray(sentenceObj.forklaring_morsmaal)
-        ? sentenceObj.forklaring_morsmaal.map((item: string, i: number) => `${i + 1}. ${item}`).join('\n\n')
-        : sentenceObj.forklaring_morsmaal;
+    // Add sentence_id and handle edge cases
+    const resultsWithStatus = sentences.map((sentenceObj: any, index: number) => {
+      let forklaring = sentenceObj.forklaring;
+      let forklaringMorsmaal = sentenceObj.forklaring_morsmaal;
       
       // If sentence is correct but no explanation, provide positive feedback
-      if (setningStatus === 'riktig' && (!forklaring || forklaring.trim() === '')) {
+      if (sentenceObj.setning_status === 'riktig' && (!forklaring || forklaring.trim() === '')) {
         forklaring = 'Denne setningen er riktig! Godt jobbet! 🎉';
       }
       
-      if (setningStatus === 'riktig' && (!forklaringMorsmaal || forklaringMorsmaal.trim() === '')) {
-        forklaringMorsmaal = forklaring; // Use same message if no translation
+      if (sentenceObj.setning_status === 'riktig' && (!forklaringMorsmaal || forklaringMorsmaal.trim() === '')) {
+        forklaringMorsmaal = forklaring;
       }
       
       return {
         ...sentenceObj,
         forklaring,
         forklaring_morsmaal: forklaringMorsmaal,
-        setning_status: setningStatus,
         sentence_id: `${submissionId}-${index}`,
       };
     });

@@ -22,13 +22,13 @@ export async function POST(req: Request) {
     console.log('Splitting sentences for language:', morsmaal);
 
     // Build system prompt for sentence splitting
-    const systemPrompt = `Du er en hjelpsom assistent som deler tekst inn i setninger og korrigerer grunnleggende tegnsetting.
+    const systemPrompt = `Du er en hjelpsom skriveassistent som hjelper brukeren med å dele tekst i setninger og korrigere tegnsetting.
 
-Din oppgave:
-1. Del teksten inn i separate setninger
-2. Legg til punktum på slutten av hver setning hvis det mangler
-3. Start hver setning med stor bokstav
-4. IKKE endre ordene eller grammatikken - kun tegnsetting og stor bokstav i begynnelsen
+# Instruksjoner
+1. Del teksten inn i separate setninger. 
+2. Legg til punktum, spørsmålstegn eller utropstegn på slutten av hver setning hvis det mangler. 
+3. Start hver setning med stor bokstav. 
+4. IKKE endre noen ord, bøyninger eller grammatikk.
 
 Svar med kun én JSON-struktur på toppnivå – et array hvor hvert objekt representerer én setning:
 - "original": Den opprinnelige setningen som brukeren skrev (med korrigert tegnsetting og stor bokstav)
@@ -38,11 +38,12 @@ Svar med kun én JSON-struktur på toppnivå – et array hvor hvert objekt repr
 Returner kun et JSON-objekt (gyldig JSON, uten kodeblokker eller ekstra tekst).
 
 Eksempel:
-Input: "jeg heter maksym jeg er fra ukraina"
+Input: "Vi danset og holdt på hele natta, jeg tror aldri jeg har hatt det så gøy. Klokka ble alt for mye og jeg glemte helt å dra hjem i tide haha."
 Output:
 [
-  {"original": "Jeg heter maksym.", "corrected": "Jeg heter maksym."},
-  {"original": "Jeg er fra ukraina.", "corrected": "Jeg er fra ukraina."}
+  {"original": "Vi danset og holdt på hele natta.", "corrected": "Vi danset og holdt på hele natta."},
+  {"original": "Jeg tror aldri jeg har hatt det så gøy.", "corrected": "Jeg tror aldri jeg har hatt det så gøy."},
+  {"original": "Klokka ble alt for mye og jeg glemte helt å dra hjem i tide haha.", "corrected": "Klokka ble alt for mye og jeg glemte helt å dra hjem i tide haha."}
 ]`;
 
     // Make API call to OpenAI
