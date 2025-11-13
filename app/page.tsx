@@ -35,6 +35,20 @@ interface SpraakhjelpperResult {
   isLocal?: boolean;
 }
 
+interface SplitSentence {
+  original: string;
+  corrected: string;
+}
+
+interface SplitSentencesResult {
+  success: boolean;
+  sentences: SplitSentence[];
+  sentenceCount: number;
+  morsmaal: string;
+  originalText: string;
+  provider?: string;
+}
+
 const languages = [
   { code: 'arabisk', name: 'Arabisk', flag: '🇸🇦' },
   { code: 'dari', name: 'Dari', flag: '🇦🇫' },
@@ -58,6 +72,11 @@ export default function SpraakhjelpperPage() {
   const [selectedLanguage, setSelectedLanguage] = useState<string>('')
   const [selectedProvider, setSelectedProvider] = useState<'openai' | 'azure'>('openai')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  // New: Split sentences state
+  const [splitResult, setSplitResult] = useState<SplitSentencesResult | null>(null)
+  const [showSplitOverview, setShowSplitOverview] = useState(false)
+  
   const [result, setResult] = useState<SpraakhjelpperResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0)
@@ -69,7 +88,6 @@ export default function SpraakhjelpperPage() {
   const [activeTextView, setActiveTextView] = useState<'original' | 'user'>('user')
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [showConfetti, setShowConfetti] = useState(false)
-  const [showCorrectAnswer, setShowCorrectAnswer] = useState(false)
 
   const successSound = useAudio('/audio/success-fanfare.mp3', {
     volume: 0.7,
@@ -98,6 +116,7 @@ export default function SpraakhjelpperPage() {
     }
   }, [result])
 
+  // Step 1: Split text into sentences
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!inputValue.trim() || !selectedLanguage) {
@@ -107,17 +126,13 @@ export default function SpraakhjelpperPage() {
 
     setIsSubmitting(true)
     setShowForm(false)
+    setSplitResult(null)
     setResult(null)
     setError(null)
-    setCurrentSentenceIndex(0)
-    setRetryInput('')
-    setShowSummary(false)
-    setActiveTextView('user')
-    setShowCorrectAnswer(false)
 
     try {
       // Choose API endpoint based on selected provider
-      const apiEndpoint = selectedProvider === 'azure' ? '/api/spraakhjelper-azure' : '/api/spraakhjelper';
+      const apiEndpoint = selectedProvider === 'azure' ? '/api/split-sentences-azure' : '/api/split-sentences';
       
       const response = await fetch(apiEndpoint, {
         method: 'POST',
@@ -136,12 +151,63 @@ export default function SpraakhjelpperPage() {
         throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`)
       }
 
+      setSplitResult(data)
+      setShowSplitOverview(true)
+      toast.success('Teksten er delt inn i setninger!')
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'En feil oppstod'
+      setError(errorMessage)
+      toast.error(`Feil: ${errorMessage}`)
+      setShowForm(true)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Step 2: Analyze sentences
+  const handleAnalyze = async () => {
+    if (!splitResult) return
+
+    setIsSubmitting(true)
+    setShowSplitOverview(false)
+    setResult(null)
+    setError(null)
+    setCurrentSentenceIndex(0)
+    setRetryInput('')
+    setShowSummary(false)
+    setActiveTextView('user')
+
+    try {
+      // Choose API endpoint based on selected provider
+      const apiEndpoint = selectedProvider === 'azure' ? '/api/spraakhjelper-azure' : '/api/spraakhjelper';
+      
+      // Use the corrected text from split result
+      const textToAnalyze = splitResult.sentences.map(s => s.corrected).join(' ')
+      
+      const response = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: textToAnalyze,
+          morsmaal: splitResult.morsmaal,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`)
+      }
+
       setResult(data)
       toast.success('Analyse fullført!')
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'En feil oppstod'
       setError(errorMessage)
       toast.error(`Feil: ${errorMessage}`)
+      setShowSplitOverview(true)
     } finally {
       setIsSubmitting(false)
     }
@@ -151,7 +217,6 @@ export default function SpraakhjelpperPage() {
     if (result && currentSentenceIndex < result.results.length - 1) {
       setCurrentSentenceIndex(currentSentenceIndex + 1)
       setRetryInput('')
-      setShowCorrectAnswer(false)
     }
   }
 
@@ -159,19 +224,19 @@ export default function SpraakhjelpperPage() {
     if (currentSentenceIndex > 0) {
       setCurrentSentenceIndex(currentSentenceIndex - 1)
       setRetryInput('')
-      setShowCorrectAnswer(false)
     }
   }
 
   const showInputForm = () => {
     setShowForm(true)
+    setSplitResult(null)
+    setShowSplitOverview(false)
     setResult(null)
     setError(null)
     setCurrentSentenceIndex(0)
     setRetryInput('')
     setShowSummary(false)
     setActiveTextView('user')
-    setShowCorrectAnswer(false)
     localStorage.removeItem('spraakhjelper-result')
   }
 
@@ -186,25 +251,45 @@ export default function SpraakhjelpperPage() {
     }
   }
 
-  const handleCheckAnswer = () => {
-    if (!retryInput.trim() || !currentSentence) {
+  const handleCheckAnswer = async () => {
+    if (!retryInput.trim() || !currentSentence || !result) {
       toast.error('Skriv inn et svar først')
       return
     }
 
     setIsCheckingAnswer(true)
 
-    const normalizedRetry = retryInput.trim().toLowerCase().replace(/[.,!?]/g, '')
-    const normalizedCorrect = currentSentence.riktig_setning.toLowerCase().replace(/[.,!?]/g, '')
-    const isCorrect = normalizedRetry === normalizedCorrect
+    try {
+      // Choose API endpoint based on selected provider
+      const apiEndpoint = selectedProvider === 'azure' ? '/api/check-sentence-azure' : '/api/check-sentence';
+      
+      const response = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sentence: retryInput.trim(),
+          correctSentence: currentSentence.riktig_setning,
+          morsmaal: result.morsmaal,
+        }),
+      })
 
-    if (result) {
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Kunne ikke sjekke svaret')
+      }
+
+      // Update the current sentence with new explanation from AI
       const updatedResults = result.results.map((sentence, index) => {
         if (index === currentSentenceIndex) {
           return {
             ...sentence,
             bruker_setning: retryInput.trim(),
-            setning_status: isCorrect ? ('riktig_2' as const) : ('feil' as const),
+            setning_status: data.er_riktig ? ('riktig_2' as const) : ('feil' as const),
+            forklaring: data.forklaring,
+            forklaring_morsmaal: data.forklaring_morsmaal,
           }
         }
         return sentence
@@ -215,20 +300,22 @@ export default function SpraakhjelpperPage() {
         results: updatedResults
       })
 
-      if (isCorrect) {
+      if (data.er_riktig) {
         toast.success('Riktig! Godt jobbet! 🎉')
         if (soundEnabled) {
           successSound.play().catch(error => console.error('Audio error:', error))
         }
       } else {
-        toast.error('Ikke helt riktig ennå. Prøv igjen!')
-        setShowCorrectAnswer(true)
+        toast.info('Se forklaringen for tips!')
       }
 
       setRetryInput('')
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'En feil oppstod'
+      toast.error(`Feil: ${errorMessage}`)
+    } finally {
+      setIsCheckingAnswer(false)
     }
-
-    setIsCheckingAnswer(false)
   }
 
   const getStatistics = () => {
@@ -358,10 +445,10 @@ export default function SpraakhjelpperPage() {
               <h1 className="text-4xl font-bold">Språkhjelperen</h1>
             </div>
             <p className="text-muted-foreground">
-              Skriv inn teksten din og velg ditt morsmål for å få hjelp med norsk.
+              Få tilbakemeldinger fra KI på teksten din.
             </p>
           </div>
-          {(result || error) && (
+          {(result || error || showSplitOverview) && (
             <Button variant="outline" onClick={showInputForm}>
               Start på nytt
             </Button>
@@ -441,7 +528,7 @@ export default function SpraakhjelpperPage() {
                   className="w-full"
                   disabled={!inputValue.trim() || !selectedLanguage || isSubmitting}
                 >
-                  {isSubmitting ? 'Analyserer...' : 'Analyser tekst'}
+                  {isSubmitting ? 'Deler inn setninger...' : 'Del inn i setninger'}
                 </Button>
               </form>
             </CardContent>
@@ -449,6 +536,51 @@ export default function SpraakhjelpperPage() {
         )}
         
         <LoadingAnimation isVisible={isSubmitting} />
+        
+        {/* Step 1 Result: Overview of split sentences */}
+        {showSplitOverview && splitResult && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Oversikt over teksten din</CardTitle>
+                  <CardDescription>
+                    Teksten er delt inn i {splitResult.sentenceCount} {splitResult.sentenceCount === 1 ? 'setning' : 'setninger'}
+                  </CardDescription>
+                </div>
+                <Button variant="outline" onClick={showInputForm}>
+                  Tilbake
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="font-semibold mb-3 text-blue-900">Setninger funnet:</h3>
+                  <ol className="space-y-2">
+                    {splitResult.sentences.map((sentence, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <span className="font-semibold text-blue-700 mt-0.5">{index + 1}.</span>
+                        <span className="flex-1">{sentence.corrected}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+                
+                <div className="flex justify-end items-center pt-4 border-t">
+                  <Button 
+                    onClick={handleAnalyze}
+                    disabled={isSubmitting}
+                    size="lg"
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {isSubmitting ? 'Analyserer...' : 'Analyser setninger'}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         
         {error && (
           <Card className="border-red-300 bg-red-50">
@@ -460,32 +592,11 @@ export default function SpraakhjelpperPage() {
         )}
         
         {result && result.results && result.results.length > 0 && !showSummary && currentSentence && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
+          <Card className="flex flex-col h-[calc(100vh-12rem)]">
+            <CardContent className="flex-1 flex flex-col overflow-hidden p-6">
+              <div className="space-y-6 flex-1 overflow-y-auto">
                 <div>
-                  <CardTitle>Tilbakemelding på teksten din</CardTitle>
-                  <CardDescription>Bla gjennom setningene dine</CardDescription>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSoundEnabled(!soundEnabled)}
-                    className="h-8 w-8 p-0"
-                  >
-                    {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                  </Button>
-                  <Badge variant="outline">
-                    {currentSentenceIndex + 1} av {result.results.length}
-                  </Badge>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div>
-                  <p className="text-lg font-semibold mb-2">Din setning:</p>
+                  <p className="text-lg font-semibold mb-1">Din setning:</p>
                   <div className={`text-sm rounded-lg p-3 ${
                     currentSentence.setning_status === 'feil' 
                       ? 'bg-red-50 border border-red-200' 
@@ -495,29 +606,30 @@ export default function SpraakhjelpperPage() {
                   </div>
                 </div>
                 
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">Forslag til forbedringer:</h3>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant={showNorwegianExplanation ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setShowNorwegianExplanation(true)}
-                    >
-                      <Languages className="h-3 w-3 mr-1" />
-                      Norsk
-                    </Button>
-                    <Button
-                      variant={!showNorwegianExplanation ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setShowNorwegianExplanation(false)}
-                    >
-                      <Languages className="h-3 w-3 mr-1" />
-                      {result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.name : 'Morsmål'}
-                    </Button>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Forslag til forbedringer:</h3>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant={showNorwegianExplanation ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setShowNorwegianExplanation(true)}
+                      >
+                        <span className="mr-1">🇳🇴</span>
+                        Norsk
+                      </Button>
+                      <Button
+                        variant={!showNorwegianExplanation ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setShowNorwegianExplanation(false)}
+                      >
+                        <span className="mr-1">{result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.flag : '🌐'}</span>
+                        {result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.name : 'Morsmål'}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                
-                <div className={`text-sm rounded-lg p-4 ${
+                  
+                  <div className={`text-sm rounded-lg p-4 ${
                   showNorwegianExplanation ? 'bg-blue-50 border border-blue-200' : 'bg-purple-50 border border-purple-200'
                 }`}>
                   <div className="space-y-2">
@@ -544,13 +656,17 @@ export default function SpraakhjelpperPage() {
                       ))}
                   </div>
                 </div>
+                </div>
                 
                 {currentSentence.setning_status === 'feil' && (
                   <div className="p-4 bg-gray-50 border rounded-lg">
-                    <h4 className="text-lg font-semibold mb-3">
+                    <h4 className="text-lg font-semibold mb-1">
                       Kan du prøve å skrive setningen på nytt?
                     </h4>
-                    <div className="space-y-3">
+                    <p className="text-sm text-gray-600 mb-3">
+                      Husk å sette punktum på slutten av setningen!
+                    </p>
+                    <div className="flex gap-2">
                       <Input
                         placeholder="Skriv setningen din på nytt her..."
                         value={retryInput}
@@ -562,50 +678,32 @@ export default function SpraakhjelpperPage() {
                           }
                         }}
                       />
-                      
-                      {showCorrectAnswer && (
-                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                          <p className="text-sm font-semibold text-green-800 mb-1">Riktig svar:</p>
-                          <p className="text-sm text-green-700">{currentSentence.riktig_setning}</p>
-                        </div>
-                      )}
-                      
-                      <div className="flex justify-between">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setRetryInput('')
-                            setShowCorrectAnswer(false)
-                          }}
-                          disabled={!retryInput.trim()}
-                        >
-                          Tøm
-                        </Button>
-                        <div className="flex gap-2">
-                          {!showCorrectAnswer && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setShowCorrectAnswer(true)}
-                            >
-                              Vis riktig svar
-                            </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            onClick={handleCheckAnswer}
-                            disabled={!retryInput.trim() || isCheckingAnswer}
-                          >
-                            {isCheckingAnswer ? 'Sjekker...' : 'Sjekk svar'}
-                          </Button>
-                        </div>
-                      </div>
+                      <Button
+                        size="sm"
+                        onClick={handleCheckAnswer}
+                        disabled={!retryInput.trim() || isCheckingAnswer}
+                        className="whitespace-nowrap"
+                      >
+                        {isCheckingAnswer ? 'Sjekker...' : 'Sjekk svar'}
+                      </Button>
                     </div>
                   </div>
                 )}
+              </div>
+              
+              {/* Progress bar and navigation - fixed at bottom */}
+              <div className="mt-6 space-y-4">
+                {/* Progress bar */}
+                <div className="w-full">
+                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-blue-500 transition-all duration-300 ease-out"
+                      style={{ width: `${((currentSentenceIndex + 1) / result.results.length) * 100}%` }}
+                    />
+                  </div>
+                </div>
                 
-                <div className="flex items-center justify-between pt-4 border-t">
+                <div className="flex items-center justify-between">
                   <Button
                     variant="outline"
                     onClick={goToPrevious}
@@ -649,10 +747,7 @@ export default function SpraakhjelpperPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Sammendrag av språkanalysen</CardTitle>
-                  <CardDescription>Oversikt over resultatene</CardDescription>
-                </div>
+                <h3 className="text-lg font-semibold">Sammendrag</h3>
                 <Button variant="outline" onClick={() => setShowSummary(false)}>
                   Tilbake til setninger
                 </Button>
@@ -689,7 +784,7 @@ export default function SpraakhjelpperPage() {
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-semibold mb-3">{getActiveTextData().title}</h3>
+                    <h3 className="text-lg font-semibold mb-1">{getActiveTextData().title}</h3>
                     <div className={`border rounded-lg p-4 ${getActiveTextData().bgColor}`}>
                       <p className="text-sm leading-relaxed">{getActiveTextData().text}</p>
                     </div>
@@ -700,7 +795,7 @@ export default function SpraakhjelpperPage() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     <h3 className="text-lg font-semibold">Statistikk</h3>
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
                       <div className="flex justify-between">
@@ -728,7 +823,7 @@ export default function SpraakhjelpperPage() {
                     </div>
                   </div>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     <h3 className="text-lg font-semibold">Resultat</h3>
                     <div className="bg-gray-50 border rounded-lg p-4 flex flex-col items-center">
                       <PieChart />
