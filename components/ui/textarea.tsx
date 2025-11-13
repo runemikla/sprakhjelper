@@ -10,7 +10,7 @@ export interface TextareaProps
 }
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className, autosize = false, autosizeProps, ...props }, ref) => {
+  ({ className, autosize = false, autosizeProps, style, ...props }, ref) => {
     if (autosize) {
       return (
         <TextareaAutosize
@@ -19,6 +19,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             className
           )}
           ref={ref as any}
+          style={style as any}
           {...autosizeProps}
           {...props}
         />

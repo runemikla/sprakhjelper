@@ -592,9 +592,9 @@ export default function SpraakhjelpperPage() {
         )}
         
         {result && result.results && result.results.length > 0 && !showSummary && currentSentence && (
-          <Card>
-            <CardContent>
-              <div className="space-y-6 pt-4">
+          <Card className="flex flex-col h-[calc(100vh-12rem)]">
+            <CardContent className="flex-1 flex flex-col overflow-hidden p-6">
+              <div className="space-y-6 flex-1 overflow-y-auto">
                 <div>
                   <p className="text-lg font-semibold mb-1">Din setning:</p>
                   <div className={`text-sm rounded-lg p-3 ${
@@ -615,7 +615,7 @@ export default function SpraakhjelpperPage() {
                         size="sm"
                         onClick={() => setShowNorwegianExplanation(true)}
                       >
-                        <Languages className="h-3 w-3 mr-1" />
+                        <span className="mr-1">🇳🇴</span>
                         Norsk
                       </Button>
                       <Button
@@ -623,7 +623,7 @@ export default function SpraakhjelpperPage() {
                         size="sm"
                         onClick={() => setShowNorwegianExplanation(false)}
                       >
-                        <Languages className="h-3 w-3 mr-1" />
+                        <span className="mr-1">{result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.flag : '🌐'}</span>
                         {result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.name : 'Morsmål'}
                       </Button>
                     </div>
@@ -689,9 +689,12 @@ export default function SpraakhjelpperPage() {
                     </div>
                   </div>
                 )}
-                
+              </div>
+              
+              {/* Progress bar and navigation - fixed at bottom */}
+              <div className="mt-6 space-y-4">
                 {/* Progress bar */}
-                <div className="w-full pb-6">
+                <div className="w-full">
                   <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-blue-500 transition-all duration-300 ease-out"
