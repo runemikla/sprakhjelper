@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { checkRateLimit, validateResponseSize } from '@/lib/api-helpers';
 
 // Input validation schema
 const checkSentenceSchema = z.object({
-  sentence: z.string().min(1, 'Sentence is required'),
-  correctSentence: z.string().min(1, 'Correct sentence is required'),
-  morsmaal: z.string().min(1, 'Mother language is required'),
+  sentence: z.string().min(1, 'Sentence is required').max(1000, 'Sentence too long (max 1000 characters)'),
+  correctSentence: z.string().min(1, 'Correct sentence is required').max(1000, 'Sentence too long'),
+  morsmaal: z.string().min(1, 'Mother language is required').max(50, 'Language name too long'),
 });
 
 // Azure OpenAI configuration
@@ -16,6 +17,10 @@ const AZURE_API_VERSION = process.env.AZURE_OPENAI_API_VERSION || '2024-08-01-pr
 
 export async function POST(req: Request) {
   try {
+    // Rate limiting: 10 requests per minute per IP
+    const rateLimitError = checkRateLimit(req, 10, 60000);
+    if (rateLimitError) return rateLimitError;
+    
     // Validate Azure configuration
     if (!AZURE_ENDPOINT || !AZURE_API_KEY) {
       throw new Error('Azure OpenAI configuration missing. Please set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY in .env');
@@ -119,7 +124,10 @@ Eksempel 2 - Riktig setning:
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('Azure OpenAI error:', errorData);
+      // Secure logging: Only log status code, never full error data
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Azure OpenAI error status:', response.status);
+      }
       throw new Error(`Azure OpenAI API error: ${response.status} ${response.statusText}`);
     }
 
@@ -129,6 +137,9 @@ Eksempel 2 - Riktig setning:
     if (!aiResponse) {
       throw new Error('Empty response from Azure OpenAI');
     }
+
+    // Validate response size (max 50KB)
+    validateResponseSize(aiResponse, 50000);
 
     console.log('Received response from Azure OpenAI (structured output)');
 
@@ -142,7 +153,10 @@ Eksempel 2 - Riktig setning:
     });
 
   } catch (error) {
-    console.error('Check sentence Azure API error:', error);
+    // Secure logging: Only log error type and message, never full error object
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Check sentence Azure API error:', error instanceof Error ? error.message : 'Unknown error');
+    }
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -154,7 +168,9 @@ Eksempel 2 - Riktig setning:
     return NextResponse.json(
       { 
         error: 'Internal server error', 
-        message: error instanceof Error ? error.message : 'Unknown error'
+        message: process.env.NODE_ENV === 'development' 
+          ? (error instanceof Error ? error.message : 'Unknown error')
+          : 'An error occurred processing your request'
       },
       { status: 500 }
     );

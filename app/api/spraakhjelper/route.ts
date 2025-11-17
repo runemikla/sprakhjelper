@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { z } from 'zod';
+import { checkRateLimit, validateResponseSize } from '@/lib/api-helpers';
 
 // Input validation schema
 const spraakhjelpperSchema = z.object({
-  text: z.string().min(1, 'Text is required'),
-  morsmaal: z.string().min(1, 'Mother language is required'),
+  text: z.string().min(1, 'Text is required').max(5000, 'Text too long (max 5000 characters)'),
+  morsmaal: z.string().min(1, 'Mother language is required').max(50, 'Language name too long'),
 });
 
 // Initialize OpenAI client
@@ -159,6 +160,10 @@ const TRANSFER_ERRORS: Record<string, string> = {
 
 export async function POST(req: Request) {
   try {
+    // Rate limiting: 10 requests per minute per IP
+    const rateLimitError = checkRateLimit(req, 10, 60000);
+    if (rateLimitError) return rateLimitError;
+    
     // Parse and validate input
     const body = await req.json();
     const { text, morsmaal } = spraakhjelpperSchema.parse(body);
@@ -293,6 +298,9 @@ Eksempel 3:
       throw new Error('Empty response from OpenAI');
     }
 
+    // Validate response size (max 50KB)
+    validateResponseSize(aiResponse, 50000);
+
     console.log('Received response from OpenAI (structured output)');
 
     // Parse JSON response - guaranteed valid by JSON Schema
@@ -337,7 +345,10 @@ Eksempel 3:
     });
 
   } catch (error) {
-    console.error('Spraakhjelper API error:', error);
+    // Secure logging: Only log error type and message, never full error object
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Spraakhjelper API error:', error instanceof Error ? error.message : 'Unknown error');
+    }
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -349,7 +360,9 @@ Eksempel 3:
     return NextResponse.json(
       { 
         error: 'Internal server error', 
-        message: error instanceof Error ? error.message : 'Unknown error'
+        message: process.env.NODE_ENV === 'development' 
+          ? (error instanceof Error ? error.message : 'Unknown error')
+          : 'An error occurred processing your request'
       },
       { status: 500 }
     );

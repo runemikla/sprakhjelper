@@ -638,9 +638,21 @@ export default function SpraakhjelpperPage() {
                           <div className="flex-1">
                             <ReactMarkdown
                               remarkPlugins={[remarkGfm]}
+                              disallowedElements={['script', 'iframe', 'object', 'embed', 'form', 'input']}
+                              unwrapDisallowed={true}
                               components={{
                                 p: ({ children }) => <span>{children}</span>,
                                 strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+                                a: ({ children, href }) => (
+                                  <a 
+                                    href={href?.startsWith('http') ? href : '#'} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline"
+                                  >
+                                    {children}
+                                  </a>
+                                ),
                               }}
                             >
                               {point.content}

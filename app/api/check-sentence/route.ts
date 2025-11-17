@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { z } from 'zod';
+import { checkRateLimit, validateResponseSize } from '@/lib/api-helpers';
 
 // Input validation schema
 const checkSentenceSchema = z.object({
-  sentence: z.string().min(1, 'Sentence is required'),
-  correctSentence: z.string().min(1, 'Correct sentence is required'),
-  morsmaal: z.string().min(1, 'Mother language is required'),
+  sentence: z.string().min(1, 'Sentence is required').max(1000, 'Sentence too long (max 1000 characters)'),
+  correctSentence: z.string().min(1, 'Correct sentence is required').max(1000, 'Sentence too long'),
+  morsmaal: z.string().min(1, 'Mother language is required').max(50, 'Language name too long'),
 });
 
 // Initialize OpenAI client
@@ -16,6 +17,10 @@ const openai = new OpenAI({
 
 export async function POST(req: Request) {
   try {
+    // Rate limiting: 10 requests per minute per IP
+    const rateLimitError = checkRateLimit(req, 10, 60000);
+    if (rateLimitError) return rateLimitError;
+    
     // Parse and validate input
     const body = await req.json();
     const { sentence, correctSentence, morsmaal } = checkSentenceSchema.parse(body);
@@ -106,6 +111,9 @@ Eksempel 2 - Riktig setning:
       throw new Error('Empty response from OpenAI');
     }
 
+    // Validate response size (max 50KB)
+    validateResponseSize(aiResponse, 50000);
+
     console.log('Received response from OpenAI (structured output)');
 
     // Parse JSON response - guaranteed valid by JSON Schema
@@ -118,7 +126,10 @@ Eksempel 2 - Riktig setning:
     });
 
   } catch (error) {
-    console.error('Check sentence API error:', error);
+    // Secure logging: Only log error type and message, never full error object
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Check sentence API error:', error instanceof Error ? error.message : 'Unknown error');
+    }
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -130,7 +141,9 @@ Eksempel 2 - Riktig setning:
     return NextResponse.json(
       { 
         error: 'Internal server error', 
-        message: error instanceof Error ? error.message : 'Unknown error'
+        message: process.env.NODE_ENV === 'development' 
+          ? (error instanceof Error ? error.message : 'Unknown error')
+          : 'An error occurred processing your request'
       },
       { status: 500 }
     );
