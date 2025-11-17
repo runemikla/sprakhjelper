@@ -270,14 +270,14 @@ Eksempel 3:
     };
 
     // Make API call to OpenAI with structured output
-    console.log('Calling OpenAI gpt-4o model with structured output...');
+    console.log('Calling OpenAI GPT-5 model with structured output...');
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-5',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: `Tekst fra eleven: ${text}` }
       ],
-      temperature: 0,
+      reasoning_effort: 'medium', // GPT-5 parameter: minimal, low, medium, high
       response_format: {
         type: "json_schema",
         json_schema: {

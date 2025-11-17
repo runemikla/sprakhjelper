@@ -47,13 +47,13 @@ Output:
 ]`;
 
     // Make API call to OpenAI
-    console.log('Calling OpenAI gpt-4o model...');
+    console.log('Calling OpenAI GPT-5 model...');
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-5',
       messages: [
         { role: 'user', content: `${systemPrompt}\n\nTekst: ${text}` }
       ],
-      temperature: 0,
+      reasoning_effort: 'minimal', // Fast processing for simple sentence splitting
     });
 
     const aiResponse = response.choices[0]?.message?.content?.trim();

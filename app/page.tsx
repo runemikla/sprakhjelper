@@ -70,7 +70,7 @@ const languages = [
 export default function SpraakhjelpperPage() {
   const [inputValue, setInputValue] = useState('')
   const [selectedLanguage, setSelectedLanguage] = useState<string>('')
-  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'azure'>('openai')
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'azure'>('azure')
   const [isSubmitting, setIsSubmitting] = useState(false)
   
   // New: Split sentences state
@@ -462,19 +462,13 @@ export default function SpraakhjelpperPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <Label htmlFor="provider" className="text-lg font-semibold">Velg AI-leverandør</Label>
-                  <Select value={selectedProvider} onValueChange={(value) => setSelectedProvider(value as 'openai' | 'azure')}>
+                  <Select value={selectedProvider} onValueChange={(value) => setSelectedProvider(value as 'openai' | 'azure')} disabled>
                     <SelectTrigger>
                       <SelectValue>
-                        {selectedProvider === 'openai' ? '🤖 OpenAI (GPT-4o)' : '☁️ Azure OpenAI'}
+                        {selectedProvider === 'openai' ? '🤖 OpenAI (GPT-5)' : '☁️ Azure OpenAI'}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="openai">
-                        <span className="flex items-center gap-2">
-                          <span>🤖</span>
-                          <span>OpenAI (GPT-4o)</span>
-                        </span>
-                      </SelectItem>
                       <SelectItem value="azure">
                         <span className="flex items-center gap-2">
                           <span>☁️</span>
@@ -498,7 +492,7 @@ export default function SpraakhjelpperPage() {
                         <SelectValue placeholder="Velg ditt morsmål" />
                       )}
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[300px] overflow-y-auto">
                       {languages.map((lang) => (
                         <SelectItem key={lang.code} value={lang.code}>
                           <span className="flex items-center gap-2">
@@ -607,29 +601,29 @@ export default function SpraakhjelpperPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Forslag til forbedringer:</h3>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant={showNorwegianExplanation ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setShowNorwegianExplanation(true)}
-                      >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Forslag til forbedringer:</h3>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant={showNorwegianExplanation ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setShowNorwegianExplanation(true)}
+                    >
                         <span className="mr-1">🇳🇴</span>
-                        Norsk
-                      </Button>
-                      <Button
-                        variant={!showNorwegianExplanation ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setShowNorwegianExplanation(false)}
-                      >
+                      Norsk
+                    </Button>
+                    <Button
+                      variant={!showNorwegianExplanation ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setShowNorwegianExplanation(false)}
+                    >
                         <span className="mr-1">{result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.flag : '🌐'}</span>
-                        {result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.name : 'Morsmål'}
-                      </Button>
-                    </div>
+                      {result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.name : 'Morsmål'}
+                    </Button>
                   </div>
-                  
-                  <div className={`text-sm rounded-lg p-4 ${
+                </div>
+                
+                <div className={`text-sm rounded-lg p-4 ${
                   showNorwegianExplanation ? 'bg-blue-50 border border-blue-200' : 'bg-purple-50 border border-purple-200'
                 }`}>
                   <div className="space-y-2">
@@ -655,7 +649,7 @@ export default function SpraakhjelpperPage() {
                         </div>
                       ))}
                   </div>
-                </div>
+                  </div>
                 </div>
                 
                 {currentSentence.setning_status === 'feil' && (
@@ -678,14 +672,14 @@ export default function SpraakhjelpperPage() {
                           }
                         }}
                       />
-                      <Button
-                        size="sm"
-                        onClick={handleCheckAnswer}
-                        disabled={!retryInput.trim() || isCheckingAnswer}
+                          <Button
+                            size="sm"
+                            onClick={handleCheckAnswer}
+                            disabled={!retryInput.trim() || isCheckingAnswer}
                         className="whitespace-nowrap"
-                      >
-                        {isCheckingAnswer ? 'Sjekker...' : 'Sjekk svar'}
-                      </Button>
+                          >
+                            {isCheckingAnswer ? 'Sjekker...' : 'Sjekk svar'}
+                          </Button>
                     </div>
                   </div>
                 )}

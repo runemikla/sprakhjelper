@@ -83,14 +83,14 @@ Eksempel 2 - Riktig setning:
     };
 
     // Make API call to OpenAI with structured output
-    console.log('Calling OpenAI gpt-4o model with structured output...');
+    console.log('Calling OpenAI GPT-5 model with structured output...');
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-5',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: `Sammenlign setningene og gi tilbakemelding.` }
       ],
-      temperature: 0,
+      reasoning_effort: 'low', // Quick feedback for single sentence comparison
       response_format: {
         type: "json_schema",
         json_schema: {
