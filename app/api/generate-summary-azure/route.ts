@@ -55,7 +55,7 @@ Analyser teksten og gi tilbakemelding på følgende områder:
 3. **Ordliste** - Liste over ord eleven har skrevet feil:
    - Feil skrevet ord fra elevens tekst
    - Korrekt stavemåte
-   - Kun ord som faktisk er feil stavet (ikke grammatikkfeil)
+   - Kun ord som faktisk er feil stavet (ikke grammatikkfeil). For eksempel hvis eleven har skrevet "like" i stedet for "liker", så skal ikke "like" være med i ordlisten.
 
 ## Retningslinjer
 - Vær oppmuntrende og konstruktiv

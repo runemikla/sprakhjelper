@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -98,6 +99,12 @@ export default function SpraakhjelpperPage() {
   const [error, setError] = useState<string | null>(null)
   const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0)
   const [showNorwegianExplanation, setShowNorwegianExplanation] = useState(true)
+  
+  // Teacher selection - randomly chosen on component mount, persists through session
+  const [teacherVersion, setTeacherVersion] = useState<1 | 2>(() => {
+    // Randomly select teacher 1 or 2 on first load
+    return Math.random() < 0.5 ? 1 : 2
+  })
   const [retryInput, setRetryInput] = useState('')
   const [showSummary, setShowSummary] = useState(false)
   const [showForm, setShowForm] = useState(true)
@@ -266,6 +273,18 @@ export default function SpraakhjelpperPage() {
   }
 
   const currentSentence = result?.results[currentSentenceIndex]
+
+  // Get teacher image based on sentence status
+  const getTeacherImage = (status: 'riktig' | 'riktig_2' | 'feil' | undefined) => {
+    // Add version parameter to bust cache for updated images
+    const version = 'v2'
+    if (status === 'riktig' || status === 'riktig_2') {
+      return `/images/riktig_${teacherVersion}.png?${version}`
+    } else if (status === 'feil') {
+      return `/images/feil_${teacherVersion}.png?${version}`
+    }
+    return `/images/JP_positiv.png?${version}` // Default fallback
+  }
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -795,18 +814,34 @@ export default function SpraakhjelpperPage() {
           <Card className="flex flex-col h-[calc(100vh-12rem)]">
             <CardContent className="flex-1 flex flex-col overflow-hidden p-6">
               <div className="space-y-6 flex-1 overflow-y-auto">
-                <div>
-                  <p className="text-lg font-semibold mb-1">Din setning:</p>
-                  <div className={`text-sm rounded-lg p-3 ${
-                    currentSentence.setning_status === 'feil' 
-                      ? 'bg-red-50 border border-red-200' 
-                      : 'bg-green-50 border border-green-200'
-                  }`}>
-                    {currentSentence.bruker_setning}
+                {/* Din setning section with teacher image */}
+                <div className="flex items-start gap-4">
+                  <div className="flex-1">
+                    <p className="text-lg font-semibold mb-1">Din setning:</p>
+                    <div className={`text-sm rounded-lg p-3 ${
+                      currentSentence.setning_status === 'feil' 
+                        ? 'bg-red-50 border border-red-200' 
+                        : 'bg-green-50 border border-green-200'
+                    }`}>
+                      {currentSentence.bruker_setning}
+                    </div>
+                  </div>
+                  
+                  {/* Teacher image */}
+                  <div className="flex-shrink-0">
+                    <Image 
+                      src={getTeacherImage(currentSentence.setning_status)} 
+                      alt="Lærer"
+                      width={96}
+                      height={96}
+                      className="object-contain"
+                      priority
+                    />
                   </div>
                 </div>
                 
                 <div className="space-y-2">
+                {/* Header section with language buttons */}
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold">Forslag til forbedringer:</h3>
                   <div className="flex items-center space-x-2">
