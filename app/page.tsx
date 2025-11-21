@@ -260,16 +260,10 @@ export default function SpraakhjelpperPage() {
   }
 
   const showInputForm = () => {
-    setShowForm(true)
-    setSplitResult(null)
-    setShowSplitOverview(false)
-    setResult(null)
-    setError(null)
-    setCurrentSentenceIndex(0)
-    setRetryInput('')
-    setShowSummary(false)
-    setActiveTextView('user')
-    localStorage.removeItem('spraakhjelper-result')
+    // Clear all localStorage data
+    localStorage.clear()
+    // Refresh the page to reset everything
+    window.location.reload()
   }
 
   const currentSentence = result?.results[currentSentenceIndex]
@@ -998,7 +992,7 @@ export default function SpraakhjelpperPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Sammendrag</h3>
+                <h2 className="text-2xl font-semibold">Sammendrag</h2>
                 <Button variant="outline" onClick={() => setShowSummary(false)}>
                   Tilbake til setninger
                 </Button>
@@ -1089,7 +1083,7 @@ export default function SpraakhjelpperPage() {
 
                 {/* Text Analysis Section */}
                 <div className="border-t pt-8">
-                  <h3 className="text-lg font-semibold mb-4">Detaljert tekstanalyse</h3>
+                  <h3 className="text-lg font-semibold mb-4">Tilbakemelding på teksten din</h3>
                   
                   {isGeneratingAnalysis && (
                     <LoadingAnimation isVisible={true} />
@@ -1179,7 +1173,7 @@ export default function SpraakhjelpperPage() {
                                 <tbody>
                                   {textAnalysis.ordliste.map((ord, index) => (
                                     <tr key={index} className="border-b border-blue-200 last:border-b-0">
-                                      <td className="py-2 px-3 text-red-600 line-through">{ord.feil}</td>
+                                      <td className="py-2 px-3 text-red-600 font-medium">{ord.feil}</td>
                                       <td className="py-2 px-3 text-green-600 font-medium">{ord.riktig}</td>
                                     </tr>
                                   ))}
@@ -1201,11 +1195,6 @@ export default function SpraakhjelpperPage() {
 
                 {/* PDF Download Section */}
                 <div className="border-t pt-8 mt-8">
-                  <h3 className="text-lg font-semibold mb-4">Last ned sammendrag</h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Last ned sammendraget med statistikk og analyse som en PDF-fil.
-                  </p>
-                  
                   <Button
                     onClick={downloadPDF}
                     disabled={isGeneratingPDF}
@@ -1223,10 +1212,6 @@ export default function SpraakhjelpperPage() {
                       </>
                     )}
                   </Button>
-                  
-                  <p className="text-xs text-gray-500 mt-3 text-center">
-                    💡 Tip: PDF-en kan åpnes, printes og deles når som helst.
-                  </p>
                 </div>
               </div>
             </CardContent>
