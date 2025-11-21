@@ -49,6 +49,23 @@ interface SplitSentencesResult {
   provider?: string;
 }
 
+interface TextAnalysis {
+  hva_var_bra: string;
+  hva_var_bra_morsmaal: string;
+  hva_kan_bli_bedre: string;
+  hva_kan_bli_bedre_morsmaal: string;
+  ordliste: Array<{
+    feil: string;
+    riktig: string;
+  }>;
+}
+
+interface AnalysisResult {
+  success: boolean;
+  analysis: TextAnalysis;
+  provider: string;
+}
+
 const languages = [
   { code: 'arabisk', name: 'Arabisk', flag: '🇸🇦' },
   { code: 'dari', name: 'Dari', flag: '🇦🇫' },
@@ -88,6 +105,14 @@ export default function SpraakhjelpperPage() {
   const [activeTextView, setActiveTextView] = useState<'original' | 'user'>('user')
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [showConfetti, setShowConfetti] = useState(false)
+  
+  // Text analysis state
+  const [textAnalysis, setTextAnalysis] = useState<TextAnalysis | null>(null)
+  const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false)
+  const [showAnalysisInNorwegian, setShowAnalysisInNorwegian] = useState(true)
+  
+  // PDF generation state
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
 
   const successSound = useAudio('/audio/success-fanfare.mp3', {
     volume: 0.7,
@@ -434,6 +459,186 @@ export default function SpraakhjelpperPage() {
     return formattedPoints
   }
 
+  // Generate and download PDF
+  const downloadPDF = async () => {
+    if (!result || !result.originalText || !result.results) {
+      toast.error('Ingen data å laste ned')
+      return
+    }
+
+    setIsGeneratingPDF(true)
+
+    try {
+      // Dynamic import of jsPDF
+      const { jsPDF } = await import('jspdf')
+      
+      const doc = new jsPDF()
+      const pageWidth = doc.internal.pageSize.getWidth()
+      const pageHeight = doc.internal.pageSize.getHeight()
+      const margin = 20
+      const maxWidth = pageWidth - (margin * 2)
+      let yPos = margin
+
+      // Helper function to add text with word wrap
+      const addText = (text: string, fontSize: number, isBold: boolean = false, color: [number, number, number] = [0, 0, 0]) => {
+        doc.setFontSize(fontSize)
+        doc.setFont('helvetica', isBold ? 'bold' : 'normal')
+        doc.setTextColor(color[0], color[1], color[2])
+        
+        const lines = doc.splitTextToSize(text, maxWidth)
+        
+        // Check if we need a new page
+        if (yPos + (lines.length * fontSize * 0.35) > pageHeight - margin) {
+          doc.addPage()
+          yPos = margin
+        }
+        
+        doc.text(lines, margin, yPos)
+        yPos += lines.length * fontSize * 0.35 + 5
+      }
+
+      // Helper function to add section spacing
+      const addSpace = (space: number = 10) => {
+        yPos += space
+      }
+
+      // Title
+      addText('Språkhjelperen - Sammendrag', 20, true, [59, 130, 246])
+      addSpace(5)
+      
+      // Date
+      const date = new Date().toLocaleDateString('no-NO', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      })
+      addText(date, 10, false, [107, 114, 128])
+      addSpace(15)
+
+      // Statistics
+      const statistics = getStatistics()
+      addText('Statistikk', 16, true, [31, 41, 55])
+      addSpace(5)
+      
+      doc.setDrawColor(229, 231, 235)
+      doc.setFillColor(239, 246, 255)
+      doc.rect(margin, yPos, maxWidth, 40, 'F')
+      
+      yPos += 8
+      addText(`Antall setninger: ${statistics.totalSentences}`, 11)
+      addText(`Riktige fra start: ${statistics.correctSentences}`, 11)
+      addText(`Korrigert av deg: ${statistics.correctedSentences}`, 11)
+      addText(`Nøyaktighet: ${statistics.correctPercentage}%`, 11, true, [22, 163, 74])
+      
+      addSpace(10)
+
+      // Original Text
+      addText('Din opprinnelige tekst', 16, true, [31, 41, 55])
+      addSpace(5)
+      addText(result.originalText, 10, false)
+      addSpace(15)
+
+      // Corrected Text
+      const correctedText = result.results.map(r => r.riktig_setning).join(' ')
+      addText('Korrigert versjon', 16, true, [31, 41, 55])
+      addSpace(5)
+      addText(correctedText, 10, false)
+      addSpace(15)
+
+      // Analysis (if available)
+      if (textAnalysis) {
+        addText('Detaljert analyse', 16, true, [31, 41, 55])
+        addSpace(10)
+        
+        // What was good
+        addText('Hva var bra', 14, true, [22, 163, 74])
+        addSpace(5)
+        addText(textAnalysis.hva_var_bra, 10)
+        addSpace(10)
+        
+        // What can be improved
+        addText('Hva kan bli bedre', 14, true, [234, 88, 12])
+        addSpace(5)
+        addText(textAnalysis.hva_kan_bli_bedre, 10)
+        addSpace(10)
+        
+        // Word list
+        if (textAnalysis.ordliste && textAnalysis.ordliste.length > 0) {
+          addText('Stavefeil', 14, true, [59, 130, 246])
+          addSpace(5)
+          
+          textAnalysis.ordliste.forEach(word => {
+            addText(`${word.feil} → ${word.riktig}`, 10)
+          })
+        } else {
+          addText('Ingen stavefeil funnet!', 12, false, [22, 163, 74])
+        }
+      }
+
+      // Footer
+      yPos = pageHeight - margin
+      addText('Fortsett å øve!', 10, false, [107, 114, 128])
+
+      // Generate filename with date
+      const filename = `spraakhjelperen_sammendrag_${new Date().toISOString().split('T')[0]}.pdf`
+      
+      // Save PDF
+      doc.save(filename)
+      
+      toast.success('📄 PDF lastet ned!')
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+      toast.error('Kunne ikke generere PDF. Prøv igjen.')
+    } finally {
+      setIsGeneratingPDF(false)
+    }
+  }
+
+  // Generate text analysis
+  const generateTextAnalysis = async () => {
+    if (!result || !result.originalText || !result.morsmaal) {
+      toast.error('Ingen tekst å analysere')
+      return
+    }
+
+    setIsGeneratingAnalysis(true)
+    
+    try {
+      // Choose API endpoint based on provider
+      const apiEndpoint = selectedProvider === 'azure' ? '/api/generate-summary-azure' : '/api/generate-summary'
+      
+      const response = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          originalText: result.originalText,
+          morsmaal: result.morsmaal,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate analysis')
+      }
+
+      const data: AnalysisResult = await response.json()
+      
+      if (data.success && data.analysis) {
+        setTextAnalysis(data.analysis)
+        toast.success('Analyse generert!')
+      } else {
+        throw new Error('Invalid response from API')
+      }
+      
+    } catch (error) {
+      console.error('Error generating analysis:', error)
+      toast.error('Kunne ikke generere analyse. Prøv igjen.')
+    } finally {
+      setIsGeneratingAnalysis(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8 px-4 max-w-4xl">
@@ -460,7 +665,8 @@ export default function SpraakhjelpperPage() {
           <Card>
             <CardContent className="pt-6">
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
+                {/* AI-leverandør dropdown - skjult for nå, kan aktiveres senere ved å fjerne kommentarene */}
+                {/* <div>
                   <Label htmlFor="provider" className="text-lg font-semibold">Velg AI-leverandør</Label>
                   <Select value={selectedProvider} onValueChange={(value) => setSelectedProvider(value as 'openai' | 'azure')} disabled>
                     <SelectTrigger>
@@ -477,7 +683,7 @@ export default function SpraakhjelpperPage() {
                       </SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
+                </div> */}
 
                 <div>
                   <Label htmlFor="morsmaal" className="text-lg font-semibold">Hva er ditt morsmål?</Label>
@@ -729,6 +935,10 @@ export default function SpraakhjelpperPage() {
                         onClick={() => {
                           setShowSummary(true)
                           setShowConfetti(true)
+                          // Generate analysis if not already generated
+                          if (!textAnalysis && !isGeneratingAnalysis) {
+                            generateTextAnalysis()
+                          }
                         }}
                         className="bg-blue-600 hover:bg-blue-700"
                       >
@@ -840,6 +1050,148 @@ export default function SpraakhjelpperPage() {
                       </p>
                     </div>
                   </div>
+                </div>
+
+                {/* Text Analysis Section */}
+                <div className="border-t pt-8">
+                  <h3 className="text-lg font-semibold mb-4">Detaljert tekstanalyse</h3>
+                  
+                  {isGeneratingAnalysis && (
+                    <LoadingAnimation isVisible={true} />
+                  )}
+
+                  {!isGeneratingAnalysis && !textAnalysis && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+                      <p className="text-sm text-gray-600 mb-4">
+                        Få en detaljert analyse av hva du gjorde bra og hva du kan forbedre.
+                      </p>
+                      <Button onClick={generateTextAnalysis} className="bg-blue-600 hover:bg-blue-700">
+                        Generer analyse
+                      </Button>
+                    </div>
+                  )}
+
+                  {textAnalysis && !isGeneratingAnalysis && (
+                    <div className="space-y-6">
+                      {/* Language toggle for analysis */}
+                      <div className="flex justify-end space-x-2">
+                        <Button
+                          variant={showAnalysisInNorwegian ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setShowAnalysisInNorwegian(true)}
+                        >
+                          <span className="mr-1">🇳🇴</span>
+                          Norsk
+                        </Button>
+                        <Button
+                          variant={!showAnalysisInNorwegian ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setShowAnalysisInNorwegian(false)}
+                        >
+                          <span className="mr-1">{result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.flag : '🌐'}</span>
+                          {result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.name : 'Morsmål'}
+                        </Button>
+                      </div>
+
+                      {/* What was good */}
+                      <div>
+                        <h4 className="text-md font-semibold mb-2">Hva var bra med teksten</h4>
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                            {showAnalysisInNorwegian ? textAnalysis.hva_var_bra : textAnalysis.hva_var_bra_morsmaal}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* What can be improved */}
+                      <div>
+                        <h4 className="text-md font-semibold mb-2">Hva kan bli bedre</h4>
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              components={{
+                                a: ({node, ...props}) => {
+                                  const href = props.href || '';
+                                  if (href.startsWith('http://') || href.startsWith('https://')) {
+                                    return <a {...props} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" />;
+                                  }
+                                  return <span>{props.children}</span>;
+                                },
+                              }}
+                              disallowedElements={['script', 'iframe', 'object', 'embed', 'form', 'input']}
+                              unwrapDisallowed={true}
+                            >
+                              {showAnalysisInNorwegian ? textAnalysis.hva_kan_bli_bedre : textAnalysis.hva_kan_bli_bedre_morsmaal}
+                            </ReactMarkdown>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Word list */}
+                      {textAnalysis.ordliste && textAnalysis.ordliste.length > 0 && (
+                        <div>
+                          <h4 className="text-md font-semibold mb-2">Stavefeil</h4>
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b border-blue-300">
+                                    <th className="text-left py-2 px-3 font-semibold text-red-700">Feil</th>
+                                    <th className="text-left py-2 px-3 font-semibold text-green-700">Riktig</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {textAnalysis.ordliste.map((ord, index) => (
+                                    <tr key={index} className="border-b border-blue-200 last:border-b-0">
+                                      <td className="py-2 px-3 text-red-600 line-through">{ord.feil}</td>
+                                      <td className="py-2 px-3 text-green-600 font-medium">{ord.riktig}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {textAnalysis.ordliste && textAnalysis.ordliste.length === 0 && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                          <p className="text-sm text-gray-700">🎉 Ingen stavefeil funnet!</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* PDF Download Section */}
+                <div className="border-t pt-8 mt-8">
+                  <h3 className="text-lg font-semibold mb-4">Last ned sammendrag</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Last ned sammendraget med statistikk og analyse som en PDF-fil.
+                  </p>
+                  
+                  <Button
+                    onClick={downloadPDF}
+                    disabled={isGeneratingPDF}
+                    className="w-full bg-blue-600 hover:bg-blue-700 py-6 text-lg"
+                  >
+                    {isGeneratingPDF ? (
+                      <>
+                        <span className="animate-spin mr-3">⏳</span>
+                        Genererer PDF...
+                      </>
+                    ) : (
+                      <>
+                        <span className="mr-3">📄</span>
+                        Last ned sammendrag (PDF)
+                      </>
+                    )}
+                  </Button>
+                  
+                  <p className="text-xs text-gray-500 mt-3 text-center">
+                    💡 Tip: PDF-en kan åpnes, printes og deles når som helst.
+                  </p>
                 </div>
               </div>
             </CardContent>
