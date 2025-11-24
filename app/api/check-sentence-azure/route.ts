@@ -62,14 +62,16 @@ Eksempel 1 - Setning med feil:
 {
   "er_riktig": false,
   "forklaring": "1. **jeg reiser -> reiser jeg:** Verbet «reiser» skal stå på plass nummer to i setningen. Dette følger V2-regelen, som sier at verbet skal stå i den andre posisjonen i setningen.\\n2. **Thailand -> til Thailand:** Husk å ta med preposisjonen «til» for å vise hvor du reiser: «til Thailand».",
-  "forklaring_morsmaal": "...oversatt til ${morsmaal}"
+  "forklaring_morsmaal": "...oversatt til ${morsmaal}",
+  "bruker_setning": "${sentence}"
 }
 
 Eksempel 2 - Riktig setning:
 {
   "er_riktig": true,
   "forklaring": "Flott! Denne setningen er helt riktig!",
-  "forklaring_morsmaal": "...oversatt til ${morsmaal}"
+  "forklaring_morsmaal": "...oversatt til ${morsmaal}",
+  "bruker_setning": "${sentence}"
 }`;
 
     // Define JSON Schema for structured output
@@ -87,9 +89,13 @@ Eksempel 2 - Riktig setning:
         forklaring_morsmaal: {
           type: "string",
           description: `Samme forklaring oversatt til ${morsmaal}`
+        },
+        bruker_setning: {
+          type: "string",
+          description: "Brukerens setning som ble sjekket"
         }
       },
-      required: ["er_riktig", "forklaring", "forklaring_morsmaal"],
+      required: ["er_riktig", "forklaring", "forklaring_morsmaal", "bruker_setning"],
       additionalProperties: false
     };
 
@@ -149,6 +155,8 @@ Eksempel 2 - Riktig setning:
     return NextResponse.json({
       success: true,
       ...parsedResponse,
+      // Ensure bruker_setning is included (fallback to input if not in response)
+      bruker_setning: parsedResponse.bruker_setning || sentence,
       provider: 'azure',
     });
 
