@@ -265,7 +265,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
   }
 
   const goToPrevious = () => {
-    if (currentSentenceIndex > 0) {
+    if (result && currentSentenceIndex > 0) {
       setCurrentSentenceIndex(currentSentenceIndex - 1)
       const prevSentence = result.results[currentSentenceIndex - 1]
       setRetryInput(prevSentence.bruker_setning)
