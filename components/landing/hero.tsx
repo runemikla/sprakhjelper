@@ -11,9 +11,9 @@ export function Hero() {
   const router = useRouter()
 
   const handleKomIGang = () => {
-    // Clear localStorage
+    // Clear sessionStorage
     if (typeof window !== 'undefined') {
-      localStorage.clear()
+      sessionStorage.clear()
     }
     // Navigate to spraakhjelper page
     router.push('/spraakhjelper')
@@ -33,6 +33,10 @@ export function Hero() {
         />
         {/* Gradient overlay for better text readability */}
         <div className="absolute inset-0 bg-gradient-to-br from-blue-900/70 via-blue-800/60 to-cyan-700/50" />
+        {/* Photo credit */}
+        <div className="absolute bottom-4 right-4 text-white/70 text-xs bg-black/20 backdrop-blur-sm px-3 py-1.5 rounded">
+          Foto: Silje Alvsaker / Vestland fylkeskommune
+        </div>
       </div>
 
       {/* Content */}

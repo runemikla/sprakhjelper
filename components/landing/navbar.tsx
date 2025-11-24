@@ -42,9 +42,9 @@ export function Navbar() {
 
   const handleSpraakhjelperClick = (e: React.MouseEvent) => {
     e.preventDefault()
-    // Clear localStorage
+    // Clear sessionStorage
     if (typeof window !== 'undefined') {
-      localStorage.clear()
+      sessionStorage.clear()
     }
     // Navigate to spraakhjelper page
     router.push('/spraakhjelper')

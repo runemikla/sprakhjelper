@@ -17,6 +17,8 @@ import { LoadingAnimation } from '@/components/ui/loading-animation'
 import { Confetti } from '@/components/ui/confetti'
 import { useAudio } from '@/hooks/use-audio'
 import { Navbar } from '@/components/landing/navbar'
+import { sanitizeMarkdown } from '@/lib/sanitize'
+import { fetchWithTimeout } from '@/lib/fetch-with-timeout'
 
 interface SentenceResult {
   bruker_setning: string;
@@ -134,9 +136,9 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
     preload: true
   })
 
-  // Load from localStorage
+  // Load from sessionStorage (more secure - data cleared when browser closes)
   useEffect(() => {
-    const saved = localStorage.getItem('spraakhjelper-result')
+    const saved = sessionStorage.getItem('spraakhjelper-result')
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
@@ -144,15 +146,15 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
         setShowForm(false)
       } catch (e) {
         console.error('Failed to parse saved result:', e)
-        localStorage.removeItem('spraakhjelper-result')
+        sessionStorage.removeItem('spraakhjelper-result')
       }
     }
   }, [])
 
-  // Save to localStorage
+  // Save to sessionStorage (more secure - data cleared when browser closes)
   useEffect(() => {
     if (result) {
-      localStorage.setItem('spraakhjelper-result', JSON.stringify(result))
+      sessionStorage.setItem('spraakhjelper-result', JSON.stringify(result))
     }
   }, [result])
 
@@ -174,7 +176,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
       // Choose API endpoint based on selected provider
       const apiEndpoint = selectedProvider === 'azure' ? '/api/split-sentences-azure' : '/api/split-sentences';
       
-      const response = await fetch(apiEndpoint, {
+      const response = await fetchWithTimeout(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -183,7 +185,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
           text: inputValue.trim(),
           morsmaal: selectedLanguage,
         }),
-      })
+      }, 30000)
 
       const data = await response.json()
 
@@ -223,7 +225,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
       // Use the corrected text from split result
       const textToAnalyze = splitResult.sentences.map(s => s.corrected).join(' ')
       
-      const response = await fetch(apiEndpoint, {
+      const response = await fetchWithTimeout(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -232,7 +234,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
           text: textToAnalyze,
           morsmaal: splitResult.morsmaal,
         }),
-      })
+      }, 60000)
 
       const data = await response.json()
 
@@ -273,8 +275,8 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
   }
 
   const showInputForm = () => {
-    // Clear all localStorage data
-    localStorage.clear()
+    // Clear all sessionStorage data
+    sessionStorage.clear()
     // Refresh the page to reset everything
     window.location.reload()
   }
@@ -322,7 +324,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
       // Choose API endpoint based on selected provider
       const apiEndpoint = selectedProvider === 'azure' ? '/api/check-sentence-azure' : '/api/check-sentence';
       
-      const response = await fetch(apiEndpoint, {
+      const response = await fetchWithTimeout(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -332,7 +334,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
           correctSentence: currentSentence.riktig_setning,
           morsmaal: result.morsmaal,
         }),
-      })
+      }, 30000)
 
       const data = await response.json()
 
@@ -656,7 +658,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
       // Choose API endpoint based on provider
       const apiEndpoint = selectedProvider === 'azure' ? '/api/generate-summary-azure' : '/api/generate-summary'
       
-      const response = await fetch(apiEndpoint, {
+      const response = await fetchWithTimeout(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -665,7 +667,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
           originalText: result.originalText,
           morsmaal: result.morsmaal,
         }),
-      })
+      }, 45000)
 
       if (!response.ok) {
         throw new Error('Failed to generate analysis')
@@ -702,6 +704,10 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
         />
         {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-blue-900/70 via-blue-800/60 to-cyan-700/50" />
+        {/* Photo credit */}
+        <div className="absolute bottom-4 right-4 text-white/70 text-xs bg-black/20 backdrop-blur-sm px-3 py-1.5 rounded z-10">
+          Foto: Silje Alvsaker / Vestland fylkeskommune
+        </div>
       </div>
 
       {/* Navbar */}
@@ -1003,7 +1009,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
                                 ),
                               }}
                             >
-                              {point.content}
+                              {sanitizeMarkdown(point.content)}
                             </ReactMarkdown>
                           </div>
                         </div>
@@ -1220,9 +1226,15 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
                       <div>
                         <h4 className="text-md font-semibold mb-2">Hva var bra med teksten</h4>
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                            {showAnalysisInNorwegian ? textAnalysis.hva_var_bra : textAnalysis.hva_var_bra_morsmaal}
-                          </p>
+                          <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              disallowedElements={['script', 'iframe', 'object', 'embed', 'form', 'input']}
+                              unwrapDisallowed={true}
+                            >
+                              {sanitizeMarkdown(showAnalysisInNorwegian ? textAnalysis.hva_var_bra : textAnalysis.hva_var_bra_morsmaal)}
+                            </ReactMarkdown>
+                          </div>
                         </div>
                       </div>
 
@@ -1230,7 +1242,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
                       <div>
                         <h4 className="text-md font-semibold mb-2">Hva kan bli bedre</h4>
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                          <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                          <div className="text-sm leading-relaxed">
                             <ReactMarkdown
                               remarkPlugins={[remarkGfm]}
                               components={{
@@ -1241,11 +1253,19 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
                                   }
                                   return <span>{props.children}</span>;
                                 },
+                                ul: ({node, ...props}) => <ul className="space-y-1 list-none" {...props} />,
+                                li: ({node, ...props}) => (
+                                  <li className="flex gap-2" {...props}>
+                                    <span className="font-bold text-blue-700 flex-shrink-0">•</span>
+                                    <span className="flex-1">{props.children}</span>
+                                  </li>
+                                ),
+                                p: ({node, ...props}) => <span {...props} />,
                               }}
                               disallowedElements={['script', 'iframe', 'object', 'embed', 'form', 'input']}
                               unwrapDisallowed={true}
                             >
-                              {showAnalysisInNorwegian ? textAnalysis.hva_kan_bli_bedre : textAnalysis.hva_kan_bli_bedre_morsmaal}
+                              {sanitizeMarkdown(showAnalysisInNorwegian ? textAnalysis.hva_kan_bli_bedre : textAnalysis.hva_kan_bli_bedre_morsmaal)}
                             </ReactMarkdown>
                           </div>
                         </div>

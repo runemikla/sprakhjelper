@@ -55,14 +55,14 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:text-blue-400 transition-colors">
+                <a href="mailto:post@vlfk.no" className="hover:text-blue-400 transition-colors">
                   Kontakt oss
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:text-blue-400 transition-colors">
+                <Link href="/personvern" className="hover:text-blue-400 transition-colors">
                   Personvern
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

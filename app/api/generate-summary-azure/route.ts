@@ -51,6 +51,7 @@ Analyser teksten og gi tilbakemelding på følgende områder:
    - Områder som trenger mer øvelse (f.eks. verb-bøying, substantiv-bøying, ordstilling, tegnsetting)
    - Konkrete forslag til forbedring
    - Hva eleven bør øve på videre
+   - Ikke nevn skrivefeil her.
 
 3. **Ordliste** - Liste over ord eleven har skrevet feil:
    - Feil skrevet ord fra elevens tekst
@@ -81,7 +82,7 @@ Returner resultatet som JSON.`;
         },
         hva_kan_bli_bedre: {
           type: "string",
-          description: "Konstruktiv kritikk og områder som trenger forbedring. 3-5 punkter."
+          description: "Konstruktiv kritikk og områder som trenger forbedring. Formater som en kompakt punktliste med 2-3 punkter. Bruk markdown format med bindestreker (- punkt 1\n- punkt 2). Beskriv hva eleven kan gjøre for å forbedre seg."
         },
         hva_kan_bli_bedre_morsmaal: {
           type: "string",
