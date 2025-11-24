@@ -1,44 +1,33 @@
-import DOMPurify from 'isomorphic-dompurify';
-
 /**
  * Sanitize HTML/Markdown content to prevent XSS attacks
+ * This is a lightweight sanitizer that works on both client and server
  * @param content - Content to sanitize
  * @returns Sanitized content
  */
 export function sanitizeContent(content: string): string {
   if (!content) return '';
   
-  // Configure DOMPurify
-  const config = {
-    ALLOWED_TAGS: [
-      // Text formatting
-      'b', 'i', 'em', 'strong', 'u', 's', 'del', 'mark', 'small', 'sub', 'sup',
-      // Lists
-      'ul', 'ol', 'li',
-      // Paragraphs and line breaks
-      'p', 'br', 'hr',
-      // Headers
-      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-      // Quotes
-      'blockquote',
-      // Code
-      'code', 'pre',
-      // Tables
-      'table', 'thead', 'tbody', 'tr', 'th', 'td',
-      // Links (but sanitized)
-      'a',
-    ],
-    ALLOWED_ATTR: [
-      'href', // for links
-      'title', // for tooltips
-      'class', // for styling (but we control the classes)
-    ],
-    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):)/i, // Only allow https, http, and mailto
-    FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form', 'input'],
-    FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover'],
-  };
+  // Simple regex-based sanitization (works on both server and client)
+  let sanitized = content;
   
-  return DOMPurify.sanitize(content, config);
+  // Remove script tags
+  sanitized = sanitized.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  
+  // Remove inline event handlers
+  sanitized = sanitized.replace(/\bon\w+\s*=\s*["'][^"']*["']/gi, '');
+  sanitized = sanitized.replace(/\bon\w+\s*=\s*[^\s>]*/gi, '');
+  
+  // Remove javascript: URLs
+  sanitized = sanitized.replace(/href\s*=\s*["']javascript:[^"']*["']/gi, '');
+  sanitized = sanitized.replace(/src\s*=\s*["']javascript:[^"']*["']/gi, '');
+  
+  // Remove dangerous tags
+  sanitized = sanitized.replace(/<iframe[^>]*>/gi, '');
+  sanitized = sanitized.replace(/<object[^>]*>/gi, '');
+  sanitized = sanitized.replace(/<embed[^>]*>/gi, '');
+  sanitized = sanitized.replace(/<form[^>]*>/gi, '');
+  
+  return sanitized;
 }
 
 /**
