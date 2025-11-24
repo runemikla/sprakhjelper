@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { z } from 'zod';
+import { checkRateLimit, validateResponseSize } from '@/lib/api-helpers';
 
 // Input validation schema
 const splitSentencesSchema = z.object({
-  text: z.string().min(1, 'Text is required'),
-  morsmaal: z.string().min(1, 'Mother language is required'),
+  text: z.string().min(1, 'Text is required').max(5000, 'Text too long (max 5000 characters)'),
+  morsmaal: z.string().min(1, 'Mother language is required').max(50, 'Language name too long'),
 });
 
 // Initialize OpenAI client
@@ -15,6 +16,10 @@ const openai = new OpenAI({
 
 export async function POST(req: Request) {
   try {
+    // Rate limiting: 10 requests per minute per IP
+    const rateLimitError = checkRateLimit(req, 10, 60000);
+    if (rateLimitError) return rateLimitError;
+    
     // Parse and validate input
     const body = await req.json();
     const { text, morsmaal } = splitSentencesSchema.parse(body);
@@ -47,19 +52,22 @@ Output:
 ]`;
 
     // Make API call to OpenAI
-    console.log('Calling OpenAI gpt-4o model...');
+    console.log('Calling OpenAI GPT-5 model...');
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-5',
       messages: [
         { role: 'user', content: `${systemPrompt}\n\nTekst: ${text}` }
       ],
-      temperature: 0,
+      reasoning_effort: 'minimal', // Fast processing for simple sentence splitting
     });
 
     const aiResponse = response.choices[0]?.message?.content?.trim();
     if (!aiResponse) {
       throw new Error('Empty response from OpenAI');
     }
+
+    // Validate response size (max 50KB)
+    validateResponseSize(aiResponse, 50000);
 
     console.log('Received response from OpenAI');
 
@@ -69,7 +77,10 @@ Output:
       const cleanedResponse = aiResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
       parsedResponse = JSON.parse(cleanedResponse);
     } catch (parseError) {
-      console.error('Failed to parse AI response as JSON:', parseError);
+      // Secure logging: Only log error message, never full error object
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to parse AI response as JSON');
+      }
       throw new Error('Invalid JSON response from AI model');
     }
 
@@ -88,7 +99,10 @@ Output:
     });
 
   } catch (error) {
-    console.error('Split sentences API error:', error);
+    // Secure logging: Only log error type and message, never full error object
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Split sentences API error:', error instanceof Error ? error.message : 'Unknown error');
+    }
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -100,7 +114,9 @@ Output:
     return NextResponse.json(
       { 
         error: 'Internal server error', 
-        message: error instanceof Error ? error.message : 'Unknown error'
+        message: process.env.NODE_ENV === 'development' 
+          ? (error instanceof Error ? error.message : 'Unknown error')
+          : 'An error occurred processing your request'
       },
       { status: 500 }
     );
