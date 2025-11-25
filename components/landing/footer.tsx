@@ -55,14 +55,9 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a href="mailto:post@vlfk.no" className="hover:text-blue-400 transition-colors">
+                <a href="mailto:rune.mikal.birkeland@vlfk.no" className="hover:text-blue-400 transition-colors">
                   Kontakt oss
                 </a>
-              </li>
-              <li>
-                <Link href="/personvern" className="hover:text-blue-400 transition-colors">
-                  Personvern
-                </Link>
               </li>
             </ul>
           </div>
