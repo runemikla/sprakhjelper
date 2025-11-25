@@ -8,18 +8,18 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="col-span-1 md:col-span-2">
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-3 mb-4">
               <Image
-                src="/images/Logo_Vestland_fylkeskommune_SSF_06982.PNG"
-                alt="Vestland fylkeskommune"
-                width={200}
-                height={45}
-                className="h-12 w-auto brightness-0 invert"
+                src="/images/sprakhjelper-logo2.png"
+                alt="Språkhjelperen"
+                width={48}
+                height={48}
+                className=""
               />
+              <span className="text-white text-2xl font-bold">Språkhjelperen</span>
             </div>
             <p className="text-gray-400 max-w-md">
-              En AI-drevet plattform for å lære norsk. 
-              Personlig tilbakemelding på ditt morsmål.
+              Et KI-verktøy som hjelper deg å skrive bedre norsk.
             </p>
           </div>
 

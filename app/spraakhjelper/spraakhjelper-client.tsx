@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { ChevronLeft, ChevronRight, Languages, Copy, BarChart3, Volume2, VolumeX, GraduationCap } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Languages, Copy, BarChart3, Volume2, VolumeX } from 'lucide-react'
 import { toast } from 'sonner'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -720,14 +720,14 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
           <Card className="bg-white/95 backdrop-blur-sm border-white/20 shadow-xl">
             {/* Mini Header */}
             <div className="px-6 pt-6 pb-4 border-b border-gray-200">
-              <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" onClick={showInputForm}>
-                <GraduationCap className="h-7 w-7 text-gray-900" />
-                <div>
+              <div className="cursor-pointer hover:opacity-80 transition-opacity" onClick={showInputForm}>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Image src="/images/sprakhjelper_logo.png" alt="Språkhjelperen" width={36} height={36} className="object-contain" />
                   <h2 className="text-2xl font-bold text-gray-900">Språkhjelperen</h2>
-                  <p className="text-sm text-gray-600">
-                    Få tilbakemeldinger fra KI på teksten din.
-                  </p>
                 </div>
+                <p className="text-sm text-gray-600">
+                  Få tilbakemeldinger fra KI på teksten din.
+                </p>
               </div>
             </div>
             
@@ -810,14 +810,14 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
           <Card className="bg-white/95 backdrop-blur-sm border-white/20 shadow-xl">
             {/* Mini Header */}
             <div className="px-6 pt-6 pb-4 border-b border-gray-200">
-              <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" onClick={showInputForm}>
-                <GraduationCap className="h-7 w-7 text-gray-900" />
-                <div>
+              <div className="cursor-pointer hover:opacity-80 transition-opacity" onClick={showInputForm}>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Image src="/images/sprakhjelper_logo.png" alt="Språkhjelperen" width={36} height={36} className="object-contain" />
                   <h2 className="text-2xl font-bold text-gray-900">Språkhjelperen</h2>
-                  <p className="text-sm text-gray-600">
-                    Få tilbakemeldinger fra KI på teksten din.
-                  </p>
                 </div>
+                <p className="text-sm text-gray-600">
+                  Få tilbakemeldinger fra KI på teksten din.
+                </p>
               </div>
             </div>
             
@@ -862,14 +862,14 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
           <Card className="border-red-300 bg-red-50/95 backdrop-blur-sm shadow-xl">
             {/* Mini Header */}
             <div className="px-6 pt-6 pb-4 border-b border-gray-200">
-              <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" onClick={showInputForm}>
-                <GraduationCap className="h-7 w-7 text-gray-900" />
-                <div>
+              <div className="cursor-pointer hover:opacity-80 transition-opacity" onClick={showInputForm}>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Image src="/images/sprakhjelper_logo.png" alt="Språkhjelperen" width={36} height={36} className="object-contain" />
                   <h2 className="text-2xl font-bold text-gray-900">Språkhjelperen</h2>
-                  <p className="text-sm text-gray-600">
-                    Få tilbakemeldinger fra KI på teksten din.
-                  </p>
                 </div>
+                <p className="text-sm text-gray-600">
+                  Få tilbakemeldinger fra KI på teksten din.
+                </p>
               </div>
             </div>
             
@@ -884,14 +884,14 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
           <Card className="flex flex-col h-[calc(100vh-12rem)] bg-white/95 backdrop-blur-sm border-white/20 shadow-xl">
             {/* Mini Header */}
             <div className="px-6 pt-4 pb-4 border-b border-gray-200 flex-shrink-0">
-              <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" onClick={showInputForm}>
-                <GraduationCap className="h-7 w-7 text-gray-900" />
-                <div>
+              <div className="cursor-pointer hover:opacity-80 transition-opacity" onClick={showInputForm}>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Image src="/images/sprakhjelper_logo.png" alt="Språkhjelperen" width={36} height={36} className="object-contain" />
                   <h2 className="text-2xl font-bold text-gray-900">Språkhjelperen</h2>
-                  <p className="text-sm text-gray-600">
-                    Få tilbakemeldinger fra KI på teksten din.
-                  </p>
                 </div>
+                <p className="text-sm text-gray-600">
+                  Få tilbakemeldinger fra KI på teksten din.
+                </p>
               </div>
             </div>
             
@@ -1079,14 +1079,14 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
           <Card className="bg-white/95 backdrop-blur-sm border-white/20 shadow-xl">
             {/* Mini Header */}
             <div className="px-6 pt-6 pb-4 border-b border-gray-200">
-              <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" onClick={showInputForm}>
-                <GraduationCap className="h-7 w-7 text-gray-900" />
-                <div>
+              <div className="cursor-pointer hover:opacity-80 transition-opacity" onClick={showInputForm}>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Image src="/images/sprakhjelper_logo.png" alt="Språkhjelperen" width={36} height={36} className="object-contain" />
                   <h2 className="text-2xl font-bold text-gray-900">Språkhjelperen</h2>
-                  <p className="text-sm text-gray-600">
-                    Få tilbakemeldinger fra KI på teksten din.
-                  </p>
                 </div>
+                <p className="text-sm text-gray-600">
+                  Få tilbakemeldinger fra KI på teksten din.
+                </p>
               </div>
             </div>
             
