@@ -21,7 +21,7 @@ const TRANSFER_ERRORS: Record<string, string> = {
   • Norske vokaler, spesielt «u», «y» og «ø»
   • Preteritum vs. perfektum i verb-bøying
   • Substantiv-bøying, bl.a. bestemt vs. ubestemt form`,
-  
+
   'dari': `Dari / Farsi / Persisk:
   • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
   • «Det»-setninger, altså setninger der «det» fungerer som formelt subjekt
@@ -29,7 +29,14 @@ const TRANSFER_ERRORS: Record<string, string> = {
   • Ord med mange ulike konsonanter etter hverandre
   • Plassering av ordet «ikke»
   • Substantiv-bøying, bl.a. bestemt vs. ubestemt form`,
-  
+
+  'engelsk': `Engelsk:
+  • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
+  • Substantiv-bøying, bl.a. bestemt vs. ubestemt form
+  • Kjønn på substantiv (en/ei/et)
+  • Norske vokaler, spesielt «y» og «ø»
+  • Preteritum vs. perfektum i verb-bøying`,
+
   'farsi': `Dari / Farsi / Persisk:
   • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
   • «Det»-setninger, altså setninger der «det» fungerer som formelt subjekt
@@ -37,7 +44,7 @@ const TRANSFER_ERRORS: Record<string, string> = {
   • Ord med mange ulike konsonanter etter hverandre
   • Plassering av ordet «ikke»
   • Substantiv-bøying, bl.a. bestemt vs. ubestemt form`,
-  
+
   'persisk': `Dari / Farsi / Persisk:
   • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
   • «Det»-setninger, altså setninger der «det» fungerer som formelt subjekt
@@ -45,7 +52,7 @@ const TRANSFER_ERRORS: Record<string, string> = {
   • Ord med mange ulike konsonanter etter hverandre
   • Plassering av ordet «ikke»
   • Substantiv-bøying, bl.a. bestemt vs. ubestemt form`,
-  
+
   'kurmandsji': `Kurmandsji (kurdisk):
   • Bestemt artikkel (determinativ)
   • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
@@ -53,7 +60,7 @@ const TRANSFER_ERRORS: Record<string, string> = {
   • Norske vokaler, spesielt «u», «y» og «ø»
   • Ord med mange ulike konsonanter etter hverandre
   • Plassering av ordet «ikke»`,
-  
+
   'kurdisk': `Kurmandsji (kurdisk):
   • Bestemt artikkel (determinativ)
   • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
@@ -61,26 +68,26 @@ const TRANSFER_ERRORS: Record<string, string> = {
   • Norske vokaler, spesielt «u», «y» og «ø»
   • Ord med mange ulike konsonanter etter hverandre
   • Plassering av ordet «ikke»`,
-  
+
   'mandarin': `Mandarin (kinesisk):
   • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
   • Ord med mange ulike konsonanter etter hverandre
   • Substantiv-bøying
   • Verb-bøying`,
-  
+
   'kinesisk': `Mandarin (kinesisk):
   • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
   • Ord med mange ulike konsonanter etter hverandre
   • Substantiv-bøying
   • Verb-bøying`,
-  
+
   'polsk': `Polsk:
   • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
   • Norske vokaler, spesielt «u», «y» og «ø»
   • Preteritum vs. perfektum i verb-bøying
   • Pronomen
   • Substantiv-bøying, bl.a. bestemt vs. ubestemt form`,
-  
+
   'portugisisk': `Portugisisk:
   • Bestemt artikkel (determinativ)
   • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
@@ -91,21 +98,21 @@ const TRANSFER_ERRORS: Record<string, string> = {
   • Negasjon
   • Sammensatte substantiv
   • Spørresetninger`,
-  
+
   'russisk': `Russisk / Ukrainsk:
   • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
   • Korrekt ubestemt artikkel (en, ett) foran substantiv i ubestemt form entall
   • Norske vokaler, spesielt «u», «y» og «ø»
   • Preteritum vs. perfektum i verb-bøying
   • Substantiv-bøying, bl.a. bestemt vs. ubestemt form`,
-  
+
   'ukrainsk': `Russisk / Ukrainsk:
   • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
   • Korrekt ubestemt artikkel (en, ett) foran substantiv i ubestemt form entall
   • Norske vokaler, spesielt «u», «y» og «ø»
   • Preteritum vs. perfektum i verb-bøying
   • Substantiv-bøying, bl.a. bestemt vs. ubestemt form`,
-  
+
   'somali': `Somali:
   • Bestemt artikkel (determinativ)
   • De norske konsonantene «p», «v» og «kj»
@@ -113,7 +120,14 @@ const TRANSFER_ERRORS: Record<string, string> = {
   • Den norske vokalen «y»
   • Kjønn på substantiv
   • Preposisjoner`,
-  
+
+  'spansk': `Spansk:
+  • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
+  • Substantiv-bøying, bl.a. bestemt vs. ubestemt form
+  • Korrekt ubestemt artikkel (en, ett) foran substantiv i ubestemt form entall
+  • Norske vokaler, spesielt «y» og «ø»
+  • Plassering av adjektiv`,
+
   'swahili': `Swahili:
   • Adjektiv
   • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
@@ -122,7 +136,7 @@ const TRANSFER_ERRORS: Record<string, string> = {
   • Pronomen
   • Substantiv-bøying
   • Verb-bøying`,
-  
+
   'thai': `Thai:
   • De norske konsonantene «l» og «r»
   • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
@@ -131,7 +145,7 @@ const TRANSFER_ERRORS: Record<string, string> = {
   • Subjektstvang, altså at en setning alltid skal inneholde subjekt
   • Substantiv-bøying
   • Verb-bøying`,
-  
+
   'tigrinja': `Tigrinja:
   • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
   • «Det»-setninger, altså setninger der «det» fungerer som formelt subjekt
@@ -139,7 +153,7 @@ const TRANSFER_ERRORS: Record<string, string> = {
   • Ord med mange ulike konsonanter etter hverandre
   • Preteritum vs. perfektum i verb-bøying
   • Substantiv-bøying, bl.a. bestemt vs. ubestemt form`,
-  
+
   'tyrkisk': `Tyrkisk:
   • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
   • Den norske vokalen «y»
@@ -147,7 +161,14 @@ const TRANSFER_ERRORS: Record<string, string> = {
   • Pronomen
   • Substantiv-bøying, bl.a. bestemt vs. ubestemt form
   • Å lage leddsetninger`,
-  
+
+  'ungarsk': `Ungarsk:
+  • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
+  • Substantiv-bøying, bl.a. bestemt vs. ubestemt form
+  • Korrekt ubestemt artikkel (en, ett) foran substantiv i ubestemt form entall
+  • Norske vokaler, spesielt «y» og «ø»
+  • Preposisjoner`,
+
   'vietnamesisk': `Vietnamesisk:
   • De strenge reglene for plassering av ord i setninger, blant annet V2-regelen, altså at verbet skal stå på andre plass i helsetninger
   • Konsonantene «f», «j», «w» og «z»
@@ -163,7 +184,7 @@ export async function POST(req: Request) {
     // Rate limiting: 10 requests per minute per IP
     const rateLimitError = checkRateLimit(req, 10, 60000);
     if (rateLimitError) return rateLimitError;
-    
+
     // Validate Azure configuration
     if (!AZURE_ENDPOINT || !AZURE_API_KEY) {
       throw new Error('Azure OpenAI configuration missing. Please set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY in .env');
@@ -195,6 +216,7 @@ Ikke kommenter forskjeller i dialekt- eller stilnivå som ikke påvirker grammat
 - Ikke bruk vanskelige ord som «spesifikk», «funksjon», «konstruksjon», «korrekthet», «presist», «formulering», «komplekst» og lignende. 
 - Bruk bare helt nødvendige grammatikkbegreper som «subjekt», «verb», «ordstilling» og lignende. Hvis du må bruke et grammatisk begrep som «subjekt», «verb» eller «ordstilling», så forklar det med enkle ord første gang du bruker det.
 - Ikke skriv ting som: «Denne konstruksjonen er ukorrekt». Skriv heller: «Dette sier vi ikke sånn på norsk. Her må vi gjøre ... i stedet.»
+- Ved feil bøyning av verb, forklar hvordan verbet bøyes, hva som er riktig og hvorfor.
 
 ${transferErrors ? `##Vanlige overføringsfeil fra ${morsmaal}:\n${transferErrors}\n` : ''}
 
@@ -220,7 +242,7 @@ Eksempel 2:
     {
       "bruker_setning": "Om sommeren jeg reiser Thailand på ferie.",
       "riktig_setning": "Om sommeren reiser jeg til Thailand på ferie.",
-      "forklaring": "1. **jeg reiser -> reiser jeg:** Verbet «reiser» skal stå på plass nummer to i setningen. Dette følger V2-regelen, som sier at verbet skal stå i den andre posisjonen i setningen.\\n 2. **Til Thailand -> til Thailand:** Husk å ta med preposisjonen «til» for å vise hvor du reiser: «til Thailand».",
+      "forklaring": "1. **jeg reiser -> reiser jeg: ** Verbet «reiser» skal stå på plass nummer to i setningen. Dette følger V2-regelen, som sier at verbet skal stå i den andre posisjonen i setningen.\\n 2. **Til Thailand -> til Thailand:** Husk å ta med preposisjonen «til» for å vise hvor du reiser: «til Thailand».",
       "forklaring_morsmaal": "...oversatt til ${morsmaal}",
       "setning_status": "feil"
     }
@@ -228,6 +250,19 @@ Eksempel 2:
 }
 
 Eksempel 3:
+{
+  "sentences": [
+    {
+      "bruker_setning": "Jeg spiser frokost allerede.",
+      "riktig_setning": "Jeg har spist frokost allerede.",
+      "forklaring": "1. **spiser -> har spist:** Verbet  å spise, blir bøyd slik: å spise – spiser – spiste – har spist. I din tekst passer det med «har spist» siden du skriver om noe som har skjedd, i fortid",
+      "forklaring_morsmaal": "...oversatt til ${morsmaal}",
+      "setning_status": "feil"
+    }
+  ]
+}
+
+Eksempel 4:
 {
   "sentences": [
     {
@@ -320,7 +355,7 @@ Eksempel 3:
 
     const data = await response.json();
     const aiResponse = data.choices?.[0]?.message?.content?.trim();
-    
+
     if (!aiResponse) {
       throw new Error('Empty response from Azure OpenAI');
     }
@@ -332,7 +367,7 @@ Eksempel 3:
 
     // Parse JSON response - guaranteed valid by JSON Schema
     const parsedResponse = JSON.parse(aiResponse);
-    
+
     // Extract sentences array from the wrapper object
     const sentences = parsedResponse.sentences || [];
 
@@ -343,16 +378,16 @@ Eksempel 3:
     const resultsWithStatus = sentences.map((sentenceObj: any, index: number) => {
       let forklaring = sentenceObj.forklaring;
       let forklaringMorsmaal = sentenceObj.forklaring_morsmaal;
-      
+
       // If sentence is correct but no explanation, provide positive feedback
       if (sentenceObj.setning_status === 'riktig' && (!forklaring || forklaring.trim() === '')) {
         forklaring = 'Denne setningen er riktig! Godt jobbet! 🎉';
       }
-      
+
       if (sentenceObj.setning_status === 'riktig' && (!forklaringMorsmaal || forklaringMorsmaal.trim() === '')) {
         forklaringMorsmaal = forklaring;
       }
-      
+
       return {
         ...sentenceObj,
         forklaring,
@@ -377,7 +412,7 @@ Eksempel 3:
     if (process.env.NODE_ENV === 'development') {
       console.error('Spraakhjelper Azure API error:', error instanceof Error ? error.message : 'Unknown error');
     }
-    
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Invalid input', details: error.errors },
@@ -386,9 +421,9 @@ Eksempel 3:
     }
 
     return NextResponse.json(
-      { 
-        error: 'Internal server error', 
-        message: process.env.NODE_ENV === 'development' 
+      {
+        error: 'Internal server error',
+        message: process.env.NODE_ENV === 'development'
           ? (error instanceof Error ? error.message : 'Unknown error')
           : 'An error occurred processing your request'
       },

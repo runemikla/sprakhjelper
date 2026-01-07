@@ -54,6 +54,7 @@ Analyser setningen og gi punktvis forklaring (bruk tall) PÅ NORSK hva i elevens
 - Bruk bare helt nødvendige grammatikkbegreper som «subjekt», «verb», «ordstilling» og lignende. Hvis du må bruke et grammatisk begrep, forklar det med enkle ord
 - Ikke skriv ting som: «Denne konstruksjonen er ukorrekt». Skriv heller: «Dette sier vi ikke sånn på norsk. Her må vi gjøre ... i stedet.»
 - Vær oppmuntrende og vennlig.
+- Ved feil bøyning av verb, forklar hvordan verbet bøyes, hva som er riktig og hvorfor.
 
 ##Eksempler på respons (KUN FOR SYSTEMET – IKKE VIS TIL ELEVEN)
 Følgende eksempler viser nøyaktig format på svaret. I faktiske svar skal modellen levere KUN JSON (ingen kodeblokker, ingen ekstra tekst).
@@ -72,6 +73,15 @@ Eksempel 2 - Riktig setning:
   "forklaring": "Flott! Denne setningen er helt riktig!",
   "forklaring_morsmaal": "...oversatt til ${morsmaal}",
   "bruker_setning": "${sentence}"
+}
+  
+Eksempel 3 - Setning med feil bøyning av verb:
+{
+  "er_riktig": false,
+  "forklaring": "1. **spiser -> har spist: ** Verbet  å spise, blir bøyd slik i presens og preteritum: å spise – spiser – har spist. I din tekst passer det med «har spist» siden du skriver om noe som har skjedd, i fortid",
+  "forklaring_morsmaal": "...oversatt til ${morsmaal}",
+  "bruker_setning": "${sentence}"
+}
 }`;
 
     // Define JSON Schema for structured output
