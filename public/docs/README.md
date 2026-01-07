@@ -6,7 +6,7 @@ En selvstending Next.js-applikasjon som hjelper brukere med å lære norsk ved h
 
 - 📝 **Språkanalyse**: AI-drevet analyse av norsk tekst
 - 🤖 **Fleksibel AI**: Velg mellom OpenAI eller Azure OpenAI
-- 🌍 **Flerspråklig støtte**: Forklaringer på 15 ulike morsmål
+- 🌍 **Flerspråklig støtte**: Forklaringer på 18 ulike morsmål
 - 🎯 **Interaktiv læring**: Prøv å korrigere setninger og få umiddelbar tilbakemelding
 - 📊 **Statistikk**: Se fremgang og nøyaktighet
 - 💾 **Lokal lagring**: Alle resultater lagres kun i nettleseren (ingen database)
@@ -129,18 +129,21 @@ Språkhjelperen støtter forklaringer på følgende morsmål:
 
 - 🇸🇦 Arabisk
 - 🇦🇫 Dari
+- 🇬🇧 Engelsk
 - 🇮🇷 Farsi/Persisk
 - 🏴 Kurmandsji (Kurdisk)
 - 🇨🇳 Mandarin (Kinesisk)
 - 🇵🇱 Polsk
 - 🇵🇹 Portugisisk
 - 🇷🇺 Russisk
-- 🇺🇦 Ukrainsk
 - 🇸🇴 Somali
+- 🇪🇸 Spansk
 - 🇹🇿 Swahili
 - 🇹🇭 Thai
 - 🇪🇷 Tigrinja
 - 🇹🇷 Tyrkisk
+- 🇺🇦 Ukrainsk
+- 🇭🇺 Ungarsk
 - 🇻🇳 Vietnamesisk
 
 ## 💡 Bruk

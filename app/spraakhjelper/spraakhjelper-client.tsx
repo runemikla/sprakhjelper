@@ -73,18 +73,21 @@ interface AnalysisResult {
 const languages = [
   { code: 'arabisk', name: 'Arabisk', flag: '🇸🇦' },
   { code: 'dari', name: 'Dari', flag: '🇦🇫' },
+  { code: 'engelsk', name: 'Engelsk', flag: '🇬🇧' },
   { code: 'farsi', name: 'Farsi/Persisk', flag: '🇮🇷' },
   { code: 'kurmandsji', name: 'Kurmandsji (Kurdisk)', flag: '🏴' },
   { code: 'mandarin', name: 'Mandarin (Kinesisk)', flag: '🇨🇳' },
   { code: 'polsk', name: 'Polsk', flag: '🇵🇱' },
   { code: 'portugisisk', name: 'Portugisisk', flag: '🇵🇹' },
   { code: 'russisk', name: 'Russisk', flag: '🇷🇺' },
-  { code: 'ukrainsk', name: 'Ukrainsk', flag: '🇺🇦' },
   { code: 'somali', name: 'Somali', flag: '🇸🇴' },
+  { code: 'spansk', name: 'Spansk', flag: '🇪🇸' },
   { code: 'swahili', name: 'Swahili', flag: '🇹🇿' },
   { code: 'thai', name: 'Thai', flag: '🇹🇭' },
   { code: 'tigrinja', name: 'Tigrinja', flag: '🇪🇷' },
   { code: 'tyrkisk', name: 'Tyrkisk', flag: '🇹🇷' },
+  { code: 'ukrainsk', name: 'Ukrainsk', flag: '🇺🇦' },
+  { code: 'ungarsk', name: 'Ungarsk', flag: '🇭🇺' },
   { code: 'vietnamesisk', name: 'Vietnamesisk', flag: '🇻🇳' },
 ];
 
@@ -100,16 +103,17 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
   const [selectedLanguage, setSelectedLanguage] = useState<string>('')
   const [selectedProvider, setSelectedProvider] = useState<'openai' | 'azure'>('azure')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  
+
   // New: Split sentences state
   const [splitResult, setSplitResult] = useState<SplitSentencesResult | null>(null)
   const [showSplitOverview, setShowSplitOverview] = useState(false)
-  
+  const [editableSentences, setEditableSentences] = useState<string[]>([])
+
   const [result, setResult] = useState<SpraakhjelpperResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0)
   const [showNorwegianExplanation, setShowNorwegianExplanation] = useState(true)
-  
+
   // Teacher selection - randomly chosen on component mount, persists through session
   const [teacherVersion, setTeacherVersion] = useState<1 | 2>(() => {
     // Randomly select teacher 1 or 2 on first load
@@ -122,12 +126,12 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
   const [activeTextView, setActiveTextView] = useState<'original' | 'user'>('user')
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [showConfetti, setShowConfetti] = useState(false)
-  
+
   // Text analysis state
   const [textAnalysis, setTextAnalysis] = useState<TextAnalysis | null>(null)
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false)
   const [showAnalysisInNorwegian, setShowAnalysisInNorwegian] = useState(true)
-  
+
   // PDF generation state
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
 
@@ -175,7 +179,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
     try {
       // Choose API endpoint based on selected provider
       const apiEndpoint = selectedProvider === 'azure' ? '/api/split-sentences-azure' : '/api/split-sentences';
-      
+
       const response = await fetchWithTimeout(apiEndpoint, {
         method: 'POST',
         headers: {
@@ -194,6 +198,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
       }
 
       setSplitResult(data)
+      setEditableSentences(data.sentences.map((s: SplitSentence) => s.corrected))
       setShowSplitOverview(true)
       toast.success('Teksten er delt inn i setninger!')
     } catch (err) {
@@ -221,10 +226,10 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
     try {
       // Choose API endpoint based on selected provider
       const apiEndpoint = selectedProvider === 'azure' ? '/api/spraakhjelper-azure' : '/api/spraakhjelper';
-      
-      // Use the corrected text from split result
-      const textToAnalyze = splitResult.sentences.map(s => s.corrected).join(' ')
-      
+
+      // Use the editable sentences from user input
+      const textToAnalyze = editableSentences.join(' ')
+
       const response = await fetchWithTimeout(apiEndpoint, {
         method: 'POST',
         headers: {
@@ -323,7 +328,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
     try {
       // Choose API endpoint based on selected provider
       const apiEndpoint = selectedProvider === 'azure' ? '/api/check-sentence-azure' : '/api/check-sentence';
-      
+
       const response = await fetchWithTimeout(apiEndpoint, {
         method: 'POST',
         headers: {
@@ -345,11 +350,11 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
       // Debug: Log the API response
       console.log('API Response:', data)
       console.log('Current retryInput before update:', retryInput)
-      
+
       // Get the updated sentence from API response
       const updatedSentence = data.bruker_setning || retryInput.trim()
       console.log('Updated sentence:', updatedSentence)
-      
+
       // Update the current sentence with new explanation from AI
       const updatedResults = result.results.map((sentence, index) => {
         if (index === currentSentenceIndex) {
@@ -369,7 +374,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
         ...result,
         results: updatedResults
       })
-      
+
       // Update retryInput to reflect the new bruker_setning
       // This ensures the input box shows the corrected sentence
       console.log('Setting retryInput to:', updatedSentence)
@@ -396,13 +401,13 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
 
   const getStatistics = () => {
     if (!result?.results) return { totalSentences: 0, correctSentences: 0, correctPercentage: 0, correctedSentences: 0 }
-    
+
     const totalSentences = result.results.length
     const correctSentences = result.results.filter(s => s.setning_status === 'riktig').length
     const correctedSentences = result.results.filter(s => s.setning_status === 'riktig_2').length
     const totalCorrect = correctSentences + correctedSentences
     const correctPercentage = totalSentences > 0 ? Math.round((totalCorrect / totalSentences) * 100) : 0
-    
+
     return { totalSentences, correctSentences, correctedSentences, correctPercentage }
   }
 
@@ -432,7 +437,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
         return {
           text: getUserCorrectedText(),
           title: 'Din tekst (med dine korrigeringer)',
-          description: getUserCorrectedText() !== result.originalText 
+          description: getUserCorrectedText() !== result.originalText
             ? '💡 Denne teksten oppdateres når du korrigerer setninger'
             : 'Du har ikke gjort noen korrigeringer ennå',
           bgColor: 'bg-blue-50 border-blue-200',
@@ -447,14 +452,14 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
     const stats = getStatistics()
     const radius = 45
     const circumference = 2 * Math.PI * radius
-    
+
     const originalCorrectPercentage = stats.totalSentences > 0 ? (stats.correctSentences / stats.totalSentences) * 100 : 0
     const correctedPercentage = stats.totalSentences > 0 ? (stats.correctedSentences / stats.totalSentences) * 100 : 0
     const totalCorrectPercentage = originalCorrectPercentage + correctedPercentage
-    
+
     const originalStrokeDasharray = circumference
     const originalStrokeDashoffset = circumference - (originalCorrectPercentage / 100) * circumference
-    
+
     return (
       <div className="relative w-32 h-32 mx-auto">
         <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
@@ -493,7 +498,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
     const normalizedText = text.replace(/\/n/g, '\n').replace(/\\n/g, '\n')
     const parts = normalizedText.split(/(?=\d+\.\s)/).filter(part => part.trim().length > 0)
     const formattedPoints = []
-    
+
     for (const part of parts) {
       const trimmedPart = part.trim()
       const match = trimmedPart.match(/^(\d+\.\s*)(.*)$/)
@@ -502,11 +507,11 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
         formattedPoints.push({ number: number.trim(), content: content.trim() })
       }
     }
-    
+
     if (formattedPoints.length === 0) {
       return [{ number: '1.', content: text.trim() }]
     }
-    
+
     return formattedPoints
   }
 
@@ -522,7 +527,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
     try {
       // Dynamic import of jsPDF
       const { jsPDF } = await import('jspdf')
-      
+
       const doc = new jsPDF()
       const pageWidth = doc.internal.pageSize.getWidth()
       const pageHeight = doc.internal.pageSize.getHeight()
@@ -535,15 +540,15 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
         doc.setFontSize(fontSize)
         doc.setFont('helvetica', isBold ? 'bold' : 'normal')
         doc.setTextColor(color[0], color[1], color[2])
-        
+
         const lines = doc.splitTextToSize(text, maxWidth)
-        
+
         // Check if we need a new page
         if (yPos + (lines.length * fontSize * 0.35) > pageHeight - margin) {
           doc.addPage()
           yPos = margin
         }
-        
+
         doc.text(lines, margin, yPos)
         yPos += lines.length * fontSize * 0.35 + 5
       }
@@ -556,12 +561,12 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
       // Title
       addText('Språkhjelperen - Sammendrag', 20, true, [59, 130, 246])
       addSpace(5)
-      
+
       // Date
-      const date = new Date().toLocaleDateString('no-NO', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
+      const date = new Date().toLocaleDateString('no-NO', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
       })
       addText(date, 10, false, [107, 114, 128])
       addSpace(15)
@@ -570,17 +575,17 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
       const statistics = getStatistics()
       addText('Statistikk', 16, true, [31, 41, 55])
       addSpace(5)
-      
+
       doc.setDrawColor(229, 231, 235)
       doc.setFillColor(239, 246, 255)
       doc.rect(margin, yPos, maxWidth, 40, 'F')
-      
+
       yPos += 8
       addText(`Antall setninger: ${statistics.totalSentences}`, 11)
       addText(`Riktige fra start: ${statistics.correctSentences}`, 11)
       addText(`Korrigert av deg: ${statistics.correctedSentences}`, 11)
       addText(`Nøyaktighet: ${statistics.correctPercentage}%`, 11, true, [22, 163, 74])
-      
+
       addSpace(10)
 
       // Original Text
@@ -600,24 +605,24 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
       if (textAnalysis) {
         addText('Detaljert analyse', 16, true, [31, 41, 55])
         addSpace(10)
-        
+
         // What was good
         addText('Hva var bra', 14, true, [22, 163, 74])
         addSpace(5)
         addText(textAnalysis.hva_var_bra, 10)
         addSpace(10)
-        
+
         // What can be improved
         addText('Hva kan bli bedre', 14, true, [234, 88, 12])
         addSpace(5)
         addText(textAnalysis.hva_kan_bli_bedre, 10)
         addSpace(10)
-        
+
         // Word list
         if (textAnalysis.ordliste && textAnalysis.ordliste.length > 0) {
           addText('Stavefeil', 14, true, [59, 130, 246])
           addSpace(5)
-          
+
           textAnalysis.ordliste.forEach(word => {
             addText(`${word.feil} → ${word.riktig}`, 10)
           })
@@ -632,10 +637,10 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
 
       // Generate filename with date
       const filename = `spraakhjelperen_sammendrag_${new Date().toISOString().split('T')[0]}.pdf`
-      
+
       // Save PDF
       doc.save(filename)
-      
+
       toast.success('📄 PDF lastet ned!')
     } catch (error) {
       console.error('Error generating PDF:', error)
@@ -653,11 +658,11 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
     }
 
     setIsGeneratingAnalysis(true)
-    
+
     try {
       // Choose API endpoint based on provider
       const apiEndpoint = selectedProvider === 'azure' ? '/api/generate-summary-azure' : '/api/generate-summary'
-      
+
       const response = await fetchWithTimeout(apiEndpoint, {
         method: 'POST',
         headers: {
@@ -674,14 +679,14 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
       }
 
       const data: AnalysisResult = await response.json()
-      
+
       if (data.success && data.analysis) {
         setTextAnalysis(data.analysis)
         toast.success('Analyse generert!')
       } else {
         throw new Error('Invalid response from API')
       }
-      
+
     } catch (error) {
       console.error('Error generating analysis:', error)
       toast.error('Kunne ikke generere analyse. Prøv igjen.')
@@ -714,27 +719,44 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
       <Navbar />
 
       {/* Content */}
-      <div className="relative z-10 container mx-auto py-8 px-4 max-w-4xl mt-16">
-      <div className="space-y-8">
-        {showForm && (
-          <Card className="bg-white/95 backdrop-blur-sm border-white/20 shadow-xl">
-            {/* Mini Header */}
-            <div className="px-6 pt-6 pb-4 border-b border-gray-200">
-              <div className="cursor-pointer hover:opacity-80 transition-opacity" onClick={showInputForm}>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Image src="/images/sprakhjelper_logo.png" alt="Språkhjelperen" width={36} height={36} className="object-contain" />
-                  <h2 className="text-2xl font-bold text-gray-900">Språkhjelperen</h2>
+      <div className="relative z-10 container mx-auto pt-24 pb-8 px-4 max-w-4xl">
+        <div className="space-y-8">
+          {showForm && (
+            <Card className="bg-white/95 backdrop-blur-sm border-white/20 shadow-xl">
+              {/* Mini Header */}
+              <div className="px-6 pt-6 pb-4 border-b border-gray-200">
+                <div className="flex items-start justify-between">
+                  <div className="cursor-pointer hover:opacity-80 transition-opacity flex-1" onClick={showInputForm}>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Image src="/images/sprakhjelper_logo.png" alt="Språkhjelperen" width={36} height={36} className="object-contain" />
+                      <h2 className="text-2xl font-bold text-gray-900">Språkhjelperen</h2>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Få tilbakemeldinger fra KI på teksten din.
+                    </p>
+                  </div>
+                  {/* Sound toggle button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSoundEnabled(!soundEnabled)
+                    }}
+                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                    aria-label={soundEnabled ? "Skru av lyd" : "Skru på lyd"}
+                  >
+                    {soundEnabled ? (
+                      <Volume2 className="h-6 w-6 text-gray-700" />
+                    ) : (
+                      <VolumeX className="h-6 w-6 text-gray-400" />
+                    )}
+                  </button>
                 </div>
-                <p className="text-sm text-gray-600">
-                  Få tilbakemeldinger fra KI på teksten din.
-                </p>
               </div>
-            </div>
-            
-            <CardContent className="pt-6">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* AI-leverandør dropdown - skjult for nå, kan aktiveres senere ved å fjerne kommentarene */}
-                {/* <div>
+
+              <CardContent className="pt-6">
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* AI-leverandør dropdown - skjult for nå, kan aktiveres senere ved å fjerne kommentarene */}
+                  {/* <div>
                   <Label htmlFor="provider" className="text-lg font-semibold">Velg AI-leverandør</Label>
                   <Select value={selectedProvider} onValueChange={(value) => setSelectedProvider(value as 'openai' | 'azure')} disabled>
                     <SelectTrigger>
@@ -753,587 +775,660 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
                   </Select>
                 </div> */}
 
-                <div>
-                  <Label htmlFor="morsmaal" className="text-lg font-semibold">Hva er ditt morsmål?</Label>
-                  <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
-                    <SelectTrigger>
-                      {selectedLanguage ? (
-                        <span className="flex items-center gap-2">
-                          <span>{languages.find(lang => lang.code === selectedLanguage)?.flag}</span>
-                          <span>{languages.find(lang => lang.code === selectedLanguage)?.name}</span>
-                        </span>
-                      ) : (
-                        <SelectValue placeholder="Velg ditt morsmål" />
-                      )}
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[300px] overflow-y-auto">
-                      {languages.map((lang) => (
-                        <SelectItem key={lang.code} value={lang.code}>
+                  <div>
+                    <Label htmlFor="morsmaal" className="text-lg font-semibold">Hva er ditt morsmål?</Label>
+                    <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+                      <SelectTrigger suppressHydrationWarning>
+                        {selectedLanguage ? (
                           <span className="flex items-center gap-2">
-                            <span>{lang.flag}</span>
-                            <span>{lang.name}</span>
+                            <span>{languages.find(lang => lang.code === selectedLanguage)?.flag}</span>
+                            <span>{languages.find(lang => lang.code === selectedLanguage)?.name}</span>
                           </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="input" className="text-lg font-semibold">Lim inn teksten din her:</Label>
-                  <Textarea
-                    id="input"
-                    placeholder="Skriv eller lim inn teksten din her..."
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    className="min-h-[200px]"
-                    disabled={isSubmitting}
-                  />
-                </div>
-                
-                <Button 
-                  type="submit" 
-                  className="w-full"
-                  disabled={!inputValue.trim() || !selectedLanguage || isSubmitting}
-                >
-                  {isSubmitting ? 'Deler inn setninger...' : 'Del inn i setninger'}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-        
-        <LoadingAnimation isVisible={isSubmitting} />
-        
-        {/* Step 1 Result: Overview of split sentences */}
-        {showSplitOverview && splitResult && (
-          <Card className="bg-white/95 backdrop-blur-sm border-white/20 shadow-xl">
-            {/* Mini Header */}
-            <div className="px-6 pt-6 pb-4 border-b border-gray-200">
-              <div className="cursor-pointer hover:opacity-80 transition-opacity" onClick={showInputForm}>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Image src="/images/sprakhjelper_logo.png" alt="Språkhjelperen" width={36} height={36} className="object-contain" />
-                  <h2 className="text-2xl font-bold text-gray-900">Språkhjelperen</h2>
-                </div>
-                <p className="text-sm text-gray-600">
-                  Få tilbakemeldinger fra KI på teksten din.
-                </p>
-              </div>
-            </div>
-            
-            <CardHeader>
-              <div>
-                <CardTitle>Oversikt over teksten din</CardTitle>
-                <CardDescription>
-                  Teksten er delt inn i {splitResult.sentenceCount} {splitResult.sentenceCount === 1 ? 'setning' : 'setninger'}
-                </CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h3 className="font-semibold mb-3 text-blue-900">Setninger funnet:</h3>
-                  <ol className="space-y-2">
-                    {splitResult.sentences.map((sentence, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <span className="font-semibold text-blue-700 mt-0.5">{index + 1}.</span>
-                        <span className="flex-1">{sentence.corrected}</span>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-                
-                <div className="flex justify-end items-center pt-4 border-t">
-                  <Button 
-                     onClick={handleAnalyze}
-                     disabled={isSubmitting}
-                     size="lg"
-                     className="bg-white hover:bg-gray-50 text-gray-900 border border-gray-300"
-                   >
-                     {isSubmitting ? 'Analyserer...' : 'Analyser setninger'}
-                   </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-        
-        {error && (
-          <Card className="border-red-300 bg-red-50/95 backdrop-blur-sm shadow-xl">
-            {/* Mini Header */}
-            <div className="px-6 pt-6 pb-4 border-b border-gray-200">
-              <div className="cursor-pointer hover:opacity-80 transition-opacity" onClick={showInputForm}>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Image src="/images/sprakhjelper_logo.png" alt="Språkhjelperen" width={36} height={36} className="object-contain" />
-                  <h2 className="text-2xl font-bold text-gray-900">Språkhjelperen</h2>
-                </div>
-                <p className="text-sm text-gray-600">
-                  Få tilbakemeldinger fra KI på teksten din.
-                </p>
-              </div>
-            </div>
-            
-            <CardContent className="pt-6">
-              <h2 className="text-lg font-medium text-red-600 mb-2">Feil</h2>
-              <p>{error}</p>
-            </CardContent>
-          </Card>
-        )}
-        
-        {result && result.results && result.results.length > 0 && !showSummary && currentSentence && (
-          <Card className="flex flex-col h-[calc(100vh-12rem)] bg-white/95 backdrop-blur-sm border-white/20 shadow-xl">
-            {/* Mini Header */}
-            <div className="px-6 pt-4 pb-4 border-b border-gray-200 flex-shrink-0">
-              <div className="cursor-pointer hover:opacity-80 transition-opacity" onClick={showInputForm}>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Image src="/images/sprakhjelper_logo.png" alt="Språkhjelperen" width={36} height={36} className="object-contain" />
-                  <h2 className="text-2xl font-bold text-gray-900">Språkhjelperen</h2>
-                </div>
-                <p className="text-sm text-gray-600">
-                  Få tilbakemeldinger fra KI på teksten din.
-                </p>
-              </div>
-            </div>
-            
-            <CardContent className="flex-1 flex flex-col overflow-hidden p-6">
-              <div className="space-y-6 flex-1 overflow-y-auto">
-                {/* Din setning section with teacher image */}
-                <div className="flex items-start gap-4">
-                  <div className="flex-1">
-                    <p className="text-lg font-semibold mb-3">Din setning:</p>
-                    <div className={`rounded-lg p-4 border-2 ${
-                      currentSentence.setning_status === 'feil' 
-                        ? 'bg-red-50 border-red-300' 
-                        : 'bg-green-50 border-green-300'
-                    }`}>
-                      {currentSentence.setning_status === 'feil' ? (
-                        <div className="space-y-3">
-                          <Input
-                            value={retryInput}
-                            onChange={(e) => setRetryInput(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' && retryInput.trim() && !isCheckingAnswer) {
-                                e.preventDefault()
-                                handleCheckAnswer()
-                              }
-                            }}
-                            className="bg-white border-red-300 focus:border-red-500 text-base"
-                            placeholder="Skriv setningen din på nytt her..."
-                          />
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm text-gray-600">
-                              Kan du prøve å rette setningen din?
-                            </p>
-                            <Button
-                              size="sm"
-                              onClick={handleCheckAnswer}
-                              disabled={!retryInput.trim() || isCheckingAnswer}
-                              className="whitespace-nowrap"
-                            >
-                              {isCheckingAnswer ? 'Sjekker...' : 'Sjekk svar'}
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-sm">{currentSentence.bruker_setning}</p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Teacher image */}
-                  <div className="flex-shrink-0">
-                    <Image 
-                      src={getTeacherImage(currentSentence.setning_status)} 
-                      alt="Lærer"
-                      width={96}
-                      height={96}
-                      className="object-contain"
-                      priority
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                {/* Header section with language buttons */}
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">Forslag til forbedringer:</h3>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant={showNorwegianExplanation ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setShowNorwegianExplanation(true)}
-                    >
-                        <span className="mr-1">🇳🇴</span>
-                      Norsk
-                    </Button>
-                    <Button
-                      variant={!showNorwegianExplanation ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setShowNorwegianExplanation(false)}
-                    >
-                        <span className="mr-1">{result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.flag : '🌐'}</span>
-                      {result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.name : 'Morsmål'}
-                    </Button>
-                  </div>
-                </div>
-                
-                <div className={`text-sm rounded-lg p-4 ${
-                  showNorwegianExplanation ? 'bg-blue-50 border border-blue-200' : 'bg-purple-50 border border-purple-200'
-                }`}>
-                  <div className="space-y-2">
-                    {formatExplanation(showNorwegianExplanation ? currentSentence.forklaring : currentSentence.forklaring_morsmaal)
-                      .map((point, index) => (
-                        <div key={index} className="flex gap-2">
-                          <span className={`font-medium flex-shrink-0 ${
-                            showNorwegianExplanation ? 'text-blue-700' : 'text-purple-700'
-                          }`}>
-                            {point.number}
-                          </span>
-                          <div className="flex-1">
-                            <ReactMarkdown
-                              remarkPlugins={[remarkGfm]}
-                              disallowedElements={['script', 'iframe', 'object', 'embed', 'form', 'input']}
-                              unwrapDisallowed={true}
-                              components={{
-                                p: ({ children }) => <span>{children}</span>,
-                                strong: ({ children }) => <strong className="font-bold">{children}</strong>,
-                                a: ({ children, href }) => (
-                                  <a 
-                                    href={href?.startsWith('http') ? href : '#'} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="text-blue-600 hover:underline"
-                                  >
-                                    {children}
-                                  </a>
-                                ),
-                              }}
-                            >
-                              {sanitizeMarkdown(point.content)}
-                            </ReactMarkdown>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Progress bar and navigation - fixed at bottom */}
-              <div className="mt-6 space-y-4">
-                {/* Progress bar */}
-                <div className="w-full">
-                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-blue-500 transition-all duration-300 ease-out"
-                      style={{ width: `${((currentSentenceIndex + 1) / result.results.length) * 100}%` }}
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <Button
-                    variant="outline"
-                    onClick={goToPrevious}
-                    disabled={currentSentenceIndex === 0}
-                  >
-                    <ChevronLeft className="h-4 w-4 mr-2" />
-                    Forrige
-                  </Button>
-                  
-                  <span className="text-sm text-gray-500">
-                    Setning {currentSentenceIndex + 1} av {result.results.length}
-                  </span>
-                  
-                  <div className="flex gap-4">
-                    {currentSentenceIndex === result.results.length - 1 ? (
-                      <Button
-                        onClick={() => {
-                          setShowSummary(true)
-                          setShowConfetti(true)
-                          // Generate analysis if not already generated
-                          if (!textAnalysis && !isGeneratingAnalysis) {
-                            generateTextAnalysis()
-                          }
-                        }}
-                         className="bg-white hover:bg-gray-50 text-gray-900 border border-gray-300"
-                       >
-                         <BarChart3 className="h-4 w-4 mr-2" />
-                         Vis sammendrag
-                       </Button>
-                    ) : (
-                      <Button variant="outline" onClick={goToNext}>
-                        Neste
-                        <ChevronRight className="h-4 w-4 ml-2" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-        
-        {/* Summary View */}
-        {showSummary && result && (
-          <Card className="bg-white/95 backdrop-blur-sm border-white/20 shadow-xl">
-            {/* Mini Header */}
-            <div className="px-6 pt-6 pb-4 border-b border-gray-200">
-              <div className="cursor-pointer hover:opacity-80 transition-opacity" onClick={showInputForm}>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Image src="/images/sprakhjelper_logo.png" alt="Språkhjelperen" width={36} height={36} className="object-contain" />
-                  <h2 className="text-2xl font-bold text-gray-900">Språkhjelperen</h2>
-                </div>
-                <p className="text-sm text-gray-600">
-                  Få tilbakemeldinger fra KI på teksten din.
-                </p>
-              </div>
-            </div>
-            
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-semibold">Sammendrag</h2>
-                <Button variant="outline" onClick={() => setShowSummary(false)}>
-                  Tilbake til setninger
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-8">
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex space-x-2">
-                      <Button
-                        variant={activeTextView === 'original' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setActiveTextView('original')}
-                      >
-                        Opprinnelig
-                      </Button>
-                      <Button
-                        variant={activeTextView === 'user' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setActiveTextView('user')}
-                      >
-                        Din versjon
-                      </Button>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => copyToClipboard(getActiveTextData().copyText)}
-                    >
-                      <Copy className="h-4 w-4 mr-2" />
-                      Kopier
-                    </Button>
+                        ) : (
+                          <SelectValue placeholder="Velg ditt morsmål" />
+                        )}
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px] overflow-y-auto">
+                        {languages.map((lang) => (
+                          <SelectItem key={lang.code} value={lang.code}>
+                            <span className="flex items-center gap-2">
+                              <span>{lang.flag}</span>
+                              <span>{lang.name}</span>
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-semibold mb-1">{getActiveTextData().title}</h3>
-                    <div className={`border rounded-lg p-4 ${getActiveTextData().bgColor}`}>
-                      <p className="text-sm leading-relaxed">{getActiveTextData().text}</p>
+                    <Label htmlFor="input" className="text-lg font-semibold">Lim inn teksten din her:</Label>
+                    <Textarea
+                      id="input"
+                      placeholder="Skriv eller lim inn teksten din her..."
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      className="min-h-[200px]"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={!inputValue.trim() || !selectedLanguage || isSubmitting}
+                  >
+                    {isSubmitting ? 'Starter...' : 'Start'}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+
+          <LoadingAnimation isVisible={isSubmitting} />
+
+          {/* Step 1 Result: Overview of split sentences */}
+          {showSplitOverview && splitResult && (
+            <Card className="bg-white/95 backdrop-blur-sm border-white/20 shadow-xl">
+              {/* Mini Header */}
+              <div className="px-6 pt-6 pb-4 border-b border-gray-200">
+                <div className="flex items-start justify-between">
+                  <div className="cursor-pointer hover:opacity-80 transition-opacity flex-1" onClick={showInputForm}>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Image src="/images/sprakhjelper_logo.png" alt="Språkhjelperen" width={36} height={36} className="object-contain" />
+                      <h2 className="text-2xl font-bold text-gray-900">Språkhjelperen</h2>
                     </div>
-                    {getActiveTextData().description && (
-                      <p className="text-xs text-gray-500 mt-2">{getActiveTextData().description}</p>
+                    <p className="text-sm text-gray-600">
+                      Få tilbakemeldinger fra KI på teksten din.
+                    </p>
+                  </div>
+                  {/* Sound toggle button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSoundEnabled(!soundEnabled)
+                    }}
+                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                    aria-label={soundEnabled ? "Skru av lyd" : "Skru på lyd"}
+                  >
+                    {soundEnabled ? (
+                      <Volume2 className="h-6 w-6 text-gray-700" />
+                    ) : (
+                      <VolumeX className="h-6 w-6 text-gray-400" />
                     )}
+                  </button>
+                </div>
+              </div>
+
+              <CardHeader>
+                <div>
+                  <CardTitle>Oversikt over teksten din</CardTitle>
+                  <CardDescription>
+                    Teksten er delt inn i {splitResult.sentenceCount} {splitResult.sentenceCount === 1 ? 'setning' : 'setninger'}
+                  </CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h3 className="font-semibold mb-3 text-blue-900">Setninger funnet:</h3>
+                    <div className="space-y-3">
+                      {editableSentences.map((sentence, index) => (
+                        <div key={index} className="flex items-start gap-2">
+                          <span className="font-semibold text-blue-700 mt-2.5 flex-shrink-0">{index + 1}.</span>
+                          <Input
+                            value={sentence}
+                            onChange={(e) => {
+                              const newSentences = [...editableSentences]
+                              newSentences[index] = e.target.value
+                              setEditableSentences(newSentences)
+                            }}
+                            className="flex-1 bg-white"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end items-center pt-4 border-t">
+                    <Button
+                      onClick={handleAnalyze}
+                      disabled={isSubmitting}
+                      size="lg"
+                      className="bg-white hover:bg-gray-50 text-gray-900 border border-gray-300"
+                    >
+                      {isSubmitting ? 'Analyserer...' : 'Analyser setninger'}
+                    </Button>
                   </div>
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-semibold">Statistikk</h3>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-                      <div className="flex justify-between">
-                        <span className="text-sm font-semibold">Antall setninger:</span>
-                        <span className="text-sm font-semibold">{getStatistics().totalSentences}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm font-semibold">Riktige fra start:</span>
-                        <span className="text-sm font-semibold text-green-600">
-                          {getStatistics().correctSentences} av {getStatistics().totalSentences}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm font-semibold">Korrigerte av deg:</span>
-                        <span className="text-sm font-semibold text-blue-600">
-                          {getStatistics().correctedSentences} av {getStatistics().totalSentences}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm font-semibold">Nøyaktighet:</span>
-                        <span className="text-sm font-semibold text-green-600">
-                          {getStatistics().correctPercentage}%
-                        </span>
-                      </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {error && (
+            <Card className="border-red-300 bg-red-50/95 backdrop-blur-sm shadow-xl">
+              {/* Mini Header */}
+              <div className="px-6 pt-6 pb-4 border-b border-gray-200">
+                <div className="flex items-start justify-between">
+                  <div className="cursor-pointer hover:opacity-80 transition-opacity flex-1" onClick={showInputForm}>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Image src="/images/sprakhjelper_logo.png" alt="Språkhjelperen" width={36} height={36} className="object-contain" />
+                      <h2 className="text-2xl font-bold text-gray-900">Språkhjelperen</h2>
                     </div>
+                    <p className="text-sm text-gray-600">
+                      Få tilbakemeldinger fra KI på teksten din.
+                    </p>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-semibold">Resultat</h3>
-                    <div className="bg-gray-50 border rounded-lg p-4 flex flex-col items-center">
-                      <PieChart />
-                      <p className="text-sm text-gray-600 mt-3 text-center">
-                        {getStatistics().correctPercentage >= 80 ? '🎉 Flott jobbet!' : 
-                         getStatistics().correctPercentage >= 60 ? '👍 Bra arbeid!' : 
-                         '💪 Fortsett å øve!'}
-                      </p>
-                    </div>
-                  </div>
+                  {/* Sound toggle button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSoundEnabled(!soundEnabled)
+                    }}
+                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                    aria-label={soundEnabled ? "Skru av lyd" : "Skru på lyd"}
+                  >
+                    {soundEnabled ? (
+                      <Volume2 className="h-6 w-6 text-gray-700" />
+                    ) : (
+                      <VolumeX className="h-6 w-6 text-gray-400" />
+                    )}
+                  </button>
                 </div>
+              </div>
 
-                {/* Text Analysis Section */}
-                <div className="border-t pt-8">
-                  <h3 className="text-lg font-semibold mb-4">Tilbakemelding på teksten din</h3>
-                  
-                  {isGeneratingAnalysis && (
-                    <LoadingAnimation isVisible={true} />
-                  )}
+              <CardContent className="pt-6">
+                <h2 className="text-lg font-medium text-red-600 mb-2">Feil</h2>
+                <p>{error}</p>
+              </CardContent>
+            </Card>
+          )}
 
-                  {!isGeneratingAnalysis && !textAnalysis && (
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
-                      <p className="text-sm text-gray-600 mb-4">
-                        Få en detaljert analyse av hva du gjorde bra og hva du kan forbedre.
-                      </p>
-                      <Button onClick={generateTextAnalysis} className="bg-blue-600 hover:bg-blue-700">
-                        Generer analyse
-                      </Button>
+          {result && result.results && result.results.length > 0 && !showSummary && currentSentence && (
+            <Card className="flex flex-col h-[calc(100vh-8rem)] bg-white/95 backdrop-blur-sm border-white/20 shadow-xl">
+              {/* Mini Header */}
+              <div className="px-6 pt-4 pb-4 border-b border-gray-200 flex-shrink-0">
+                <div className="flex items-start justify-between">
+                  <div className="cursor-pointer hover:opacity-80 transition-opacity flex-1" onClick={showInputForm}>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Image src="/images/sprakhjelper_logo.png" alt="Språkhjelperen" width={36} height={36} className="object-contain" />
+                      <h2 className="text-2xl font-bold text-gray-900">Språkhjelperen</h2>
                     </div>
-                  )}
+                    <p className="text-sm text-gray-600">
+                      Få tilbakemeldinger fra KI på teksten din.
+                    </p>
+                  </div>
+                  {/* Sound toggle button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSoundEnabled(!soundEnabled)
+                    }}
+                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                    aria-label={soundEnabled ? "Skru av lyd" : "Skru på lyd"}
+                  >
+                    {soundEnabled ? (
+                      <Volume2 className="h-6 w-6 text-gray-700" />
+                    ) : (
+                      <VolumeX className="h-6 w-6 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+              </div>
 
-                  {textAnalysis && !isGeneratingAnalysis && (
-                    <div className="space-y-6">
-                      {/* Language toggle for analysis */}
-                      <div className="flex justify-end space-x-2">
+              <CardContent className="flex-1 flex flex-col overflow-hidden p-6">
+                <div className="space-y-6 flex-1 overflow-y-auto">
+                  {/* Din setning section with teacher image */}
+                  <div className="flex items-start gap-4">
+                    <div className="flex-1">
+                      <p className="text-lg font-semibold mb-3">Din setning:</p>
+                      <div className={`rounded-lg p-4 border-2 ${currentSentence.setning_status === 'feil'
+                        ? 'bg-red-50 border-red-300'
+                        : 'bg-green-50 border-green-300'
+                        }`}>
+                        {currentSentence.setning_status === 'feil' ? (
+                          <div className="space-y-3">
+                            <Input
+                              value={retryInput}
+                              onChange={(e) => setRetryInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && retryInput.trim() && !isCheckingAnswer) {
+                                  e.preventDefault()
+                                  handleCheckAnswer()
+                                }
+                              }}
+                              className="bg-white border-red-300 focus:border-red-500 text-base"
+                              placeholder="Skriv setningen din på nytt her..."
+                            />
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm text-gray-600">
+                                Kan du prøve å rette setningen din?
+                              </p>
+                              <Button
+                                size="sm"
+                                onClick={handleCheckAnswer}
+                                disabled={!retryInput.trim() || isCheckingAnswer}
+                                className="whitespace-nowrap"
+                              >
+                                {isCheckingAnswer ? 'Sjekker...' : 'Sjekk svar'}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm">{currentSentence.bruker_setning}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Teacher image */}
+                    <div className="flex-shrink-0">
+                      <Image
+                        src={getTeacherImage(currentSentence.setning_status)}
+                        alt="Lærer"
+                        width={96}
+                        height={96}
+                        className="object-contain"
+                        priority
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {/* Header section with language buttons */}
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold">Forslag til forbedringer:</h3>
+                      <div className="flex items-center space-x-2">
                         <Button
-                          variant={showAnalysisInNorwegian ? "default" : "outline"}
+                          variant={showNorwegianExplanation ? "default" : "outline"}
                           size="sm"
-                          onClick={() => setShowAnalysisInNorwegian(true)}
+                          onClick={() => setShowNorwegianExplanation(true)}
                         >
                           <span className="mr-1">🇳🇴</span>
                           Norsk
                         </Button>
                         <Button
-                          variant={!showAnalysisInNorwegian ? "default" : "outline"}
+                          variant={!showNorwegianExplanation ? "default" : "outline"}
                           size="sm"
-                          onClick={() => setShowAnalysisInNorwegian(false)}
+                          onClick={() => setShowNorwegianExplanation(false)}
                         >
                           <span className="mr-1">{result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.flag : '🌐'}</span>
                           {result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.name : 'Morsmål'}
                         </Button>
                       </div>
+                    </div>
 
-                      {/* What was good */}
-                      <div>
-                        <h4 className="text-md font-semibold mb-2">Hva var bra med teksten</h4>
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                          <div className="text-sm leading-relaxed whitespace-pre-wrap">
-                            <ReactMarkdown
-                              remarkPlugins={[remarkGfm]}
-                              disallowedElements={['script', 'iframe', 'object', 'embed', 'form', 'input']}
-                              unwrapDisallowed={true}
-                            >
-                              {sanitizeMarkdown(showAnalysisInNorwegian ? textAnalysis.hva_var_bra : textAnalysis.hva_var_bra_morsmaal)}
-                            </ReactMarkdown>
-                          </div>
+                    <div className={`text-sm rounded-lg p-4 ${showNorwegianExplanation ? 'bg-blue-50 border border-blue-200' : 'bg-purple-50 border border-purple-200'
+                      }`}>
+                      <div className="space-y-2">
+                        {formatExplanation(showNorwegianExplanation ? currentSentence.forklaring : currentSentence.forklaring_morsmaal)
+                          .map((point, index) => (
+                            <div key={index} className="flex gap-2">
+                              <span className={`font-medium flex-shrink-0 ${showNorwegianExplanation ? 'text-blue-700' : 'text-purple-700'
+                                }`}>
+                                {point.number}
+                              </span>
+                              <div className="flex-1">
+                                <ReactMarkdown
+                                  remarkPlugins={[remarkGfm]}
+                                  disallowedElements={['script', 'iframe', 'object', 'embed', 'form', 'input']}
+                                  unwrapDisallowed={true}
+                                  components={{
+                                    p: ({ children }) => <span>{children}</span>,
+                                    strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+                                    a: ({ children, href }) => (
+                                      <a
+                                        href={href?.startsWith('http') ? href : '#'}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-600 hover:underline"
+                                      >
+                                        {children}
+                                      </a>
+                                    ),
+                                  }}
+                                >
+                                  {sanitizeMarkdown(point.content)}
+                                </ReactMarkdown>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Progress bar and navigation - fixed at bottom */}
+                <div className="mt-6 space-y-4">
+                  {/* Progress bar */}
+                  <div className="w-full">
+                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-blue-500 transition-all duration-300 ease-out"
+                        style={{ width: `${((currentSentenceIndex + 1) / result.results.length) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <Button
+                      variant="outline"
+                      onClick={goToPrevious}
+                      disabled={currentSentenceIndex === 0}
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-2" />
+                      Forrige
+                    </Button>
+
+                    <span className="text-sm text-gray-500">
+                      Setning {currentSentenceIndex + 1} av {result.results.length}
+                    </span>
+
+                    <div className="flex gap-4">
+                      {currentSentenceIndex === result.results.length - 1 ? (
+                        <Button
+                          onClick={() => {
+                            setShowSummary(true)
+                            setShowConfetti(true)
+                            // Generate analysis if not already generated
+                            if (!textAnalysis && !isGeneratingAnalysis) {
+                              generateTextAnalysis()
+                            }
+                          }}
+                          className="bg-white hover:bg-gray-50 text-gray-900 border border-gray-300"
+                        >
+                          <BarChart3 className="h-4 w-4 mr-2" />
+                          Vis sammendrag
+                        </Button>
+                      ) : (
+                        <Button variant="outline" onClick={goToNext}>
+                          Neste
+                          <ChevronRight className="h-4 w-4 ml-2" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Summary View */}
+          {showSummary && result && (
+            <Card className="bg-white/95 backdrop-blur-sm border-white/20 shadow-xl">
+              {/* Mini Header */}
+              <div className="px-6 pt-6 pb-4 border-b border-gray-200">
+                <div className="flex items-start justify-between">
+                  <div className="cursor-pointer hover:opacity-80 transition-opacity flex-1" onClick={showInputForm}>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Image src="/images/sprakhjelper_logo.png" alt="Språkhjelperen" width={36} height={36} className="object-contain" />
+                      <h2 className="text-2xl font-bold text-gray-900">Språkhjelperen</h2>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Få tilbakemeldinger fra KI på teksten din.
+                    </p>
+                  </div>
+                  {/* Sound toggle button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSoundEnabled(!soundEnabled)
+                    }}
+                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                    aria-label={soundEnabled ? "Skru av lyd" : "Skru på lyd"}
+                  >
+                    {soundEnabled ? (
+                      <Volume2 className="h-6 w-6 text-gray-700" />
+                    ) : (
+                      <VolumeX className="h-6 w-6 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-semibold">Sammendrag</h2>
+                  <Button variant="outline" onClick={() => setShowSummary(false)}>
+                    Tilbake til setninger
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-8">
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex space-x-2">
+                        <Button
+                          variant={activeTextView === 'original' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setActiveTextView('original')}
+                        >
+                          Opprinnelig
+                        </Button>
+                        <Button
+                          variant={activeTextView === 'user' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setActiveTextView('user')}
+                        >
+                          Din versjon
+                        </Button>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyToClipboard(getActiveTextData().copyText)}
+                      >
+                        <Copy className="h-4 w-4 mr-2" />
+                        Kopier
+                      </Button>
+                    </div>
+
+                    <div>
+                      <h3 className="text-lg font-semibold mb-1">{getActiveTextData().title}</h3>
+                      <div className={`border rounded-lg p-4 ${getActiveTextData().bgColor}`}>
+                        <p className="text-sm leading-relaxed">{getActiveTextData().text}</p>
+                      </div>
+                      {getActiveTextData().description && (
+                        <p className="text-xs text-gray-500 mt-2">{getActiveTextData().description}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-semibold">Statistikk</h3>
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                        <div className="flex justify-between">
+                          <span className="text-sm font-semibold">Antall setninger:</span>
+                          <span className="text-sm font-semibold">{getStatistics().totalSentences}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm font-semibold">Riktige fra start:</span>
+                          <span className="text-sm font-semibold text-green-600">
+                            {getStatistics().correctSentences} av {getStatistics().totalSentences}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm font-semibold">Korrigerte av deg:</span>
+                          <span className="text-sm font-semibold text-blue-600">
+                            {getStatistics().correctedSentences} av {getStatistics().totalSentences}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm font-semibold">Nøyaktighet:</span>
+                          <span className="text-sm font-semibold text-green-600">
+                            {getStatistics().correctPercentage}%
+                          </span>
                         </div>
                       </div>
+                    </div>
 
-                      {/* What can be improved */}
-                      <div>
-                        <h4 className="text-md font-semibold mb-2">Hva kan bli bedre</h4>
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                          <div className="text-sm leading-relaxed">
-                            <ReactMarkdown
-                              remarkPlugins={[remarkGfm]}
-                              components={{
-                                a: ({node, ...props}) => {
-                                  const href = props.href || '';
-                                  if (href.startsWith('http://') || href.startsWith('https://')) {
-                                    return <a {...props} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" />;
-                                  }
-                                  return <span>{props.children}</span>;
-                                },
-                                ul: ({node, ...props}) => <ul className="space-y-1 list-none" {...props} />,
-                                li: ({node, ...props}) => (
-                                  <li className="flex gap-2" {...props}>
-                                    <span className="font-bold text-blue-700 flex-shrink-0">•</span>
-                                    <span className="flex-1">{props.children}</span>
-                                  </li>
-                                ),
-                                p: ({node, ...props}) => <span {...props} />,
-                              }}
-                              disallowedElements={['script', 'iframe', 'object', 'embed', 'form', 'input']}
-                              unwrapDisallowed={true}
-                            >
-                              {sanitizeMarkdown(showAnalysisInNorwegian ? textAnalysis.hva_kan_bli_bedre : textAnalysis.hva_kan_bli_bedre_morsmaal)}
-                            </ReactMarkdown>
-                          </div>
-                        </div>
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-semibold">Resultat</h3>
+                      <div className="bg-gray-50 border rounded-lg p-4 flex flex-col items-center">
+                        <PieChart />
+                        <p className="text-sm text-gray-600 mt-3 text-center">
+                          {getStatistics().correctPercentage >= 80 ? '🎉 Flott jobbet!' :
+                            getStatistics().correctPercentage >= 60 ? '👍 Bra arbeid!' :
+                              '💪 Fortsett å øve!'}
+                        </p>
                       </div>
+                    </div>
+                  </div>
 
-                      {/* Word list */}
-                      {textAnalysis.ordliste && textAnalysis.ordliste.length > 0 && (
+                  {/* Text Analysis Section */}
+                  <div className="border-t pt-8">
+                    <h3 className="text-lg font-semibold mb-4">Tilbakemelding på teksten din</h3>
+
+                    {isGeneratingAnalysis && (
+                      <LoadingAnimation isVisible={true} />
+                    )}
+
+                    {!isGeneratingAnalysis && !textAnalysis && (
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+                        <p className="text-sm text-gray-600 mb-4">
+                          Få en detaljert analyse av hva du gjorde bra og hva du kan forbedre.
+                        </p>
+                        <Button onClick={generateTextAnalysis} className="bg-blue-600 hover:bg-blue-700">
+                          Generer analyse
+                        </Button>
+                      </div>
+                    )}
+
+                    {textAnalysis && !isGeneratingAnalysis && (
+                      <div className="space-y-6">
+                        {/* Language toggle for analysis */}
+                        <div className="flex justify-end space-x-2">
+                          <Button
+                            variant={showAnalysisInNorwegian ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setShowAnalysisInNorwegian(true)}
+                          >
+                            <span className="mr-1">🇳🇴</span>
+                            Norsk
+                          </Button>
+                          <Button
+                            variant={!showAnalysisInNorwegian ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setShowAnalysisInNorwegian(false)}
+                          >
+                            <span className="mr-1">{result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.flag : '🌐'}</span>
+                            {result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.name : 'Morsmål'}
+                          </Button>
+                        </div>
+
+                        {/* What was good */}
                         <div>
-                          <h4 className="text-md font-semibold mb-2">Stavefeil</h4>
+                          <h4 className="text-md font-semibold mb-2">Hva var bra med teksten</h4>
                           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-sm">
-                                <thead>
-                                  <tr className="border-b border-blue-300">
-                                    <th className="text-left py-2 px-3 font-semibold text-red-700">Feil</th>
-                                    <th className="text-left py-2 px-3 font-semibold text-green-700">Riktig</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {textAnalysis.ordliste.map((ord, index) => (
-                                    <tr key={index} className="border-b border-blue-200 last:border-b-0">
-                                      <td className="py-2 px-3 text-red-600 font-medium">{ord.feil}</td>
-                                      <td className="py-2 px-3 text-green-600 font-medium">{ord.riktig}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
+                            <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                disallowedElements={['script', 'iframe', 'object', 'embed', 'form', 'input']}
+                                unwrapDisallowed={true}
+                              >
+                                {sanitizeMarkdown(showAnalysisInNorwegian ? textAnalysis.hva_var_bra : textAnalysis.hva_var_bra_morsmaal)}
+                              </ReactMarkdown>
                             </div>
                           </div>
                         </div>
-                      )}
 
-                      {textAnalysis.ordliste && textAnalysis.ordliste.length === 0 && (
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                          <p className="text-sm text-gray-700">🎉 Ingen stavefeil funnet!</p>
+                        {/* What can be improved */}
+                        <div>
+                          <h4 className="text-md font-semibold mb-2">Hva kan bli bedre</h4>
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div className="text-sm leading-relaxed">
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                  a: ({ node, ...props }) => {
+                                    const href = props.href || '';
+                                    if (href.startsWith('http://') || href.startsWith('https://')) {
+                                      return <a {...props} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" />;
+                                    }
+                                    return <span>{props.children}</span>;
+                                  },
+                                  ul: ({ node, ...props }) => <ul className="space-y-1 list-none" {...props} />,
+                                  li: ({ node, ...props }) => (
+                                    <li className="flex gap-2" {...props}>
+                                      <span className="font-bold text-blue-700 flex-shrink-0">•</span>
+                                      <span className="flex-1">{props.children}</span>
+                                    </li>
+                                  ),
+                                  p: ({ node, ...props }) => <span {...props} />,
+                                }}
+                                disallowedElements={['script', 'iframe', 'object', 'embed', 'form', 'input']}
+                                unwrapDisallowed={true}
+                              >
+                                {sanitizeMarkdown(showAnalysisInNorwegian ? textAnalysis.hva_kan_bli_bedre : textAnalysis.hva_kan_bli_bedre_morsmaal)}
+                              </ReactMarkdown>
+                            </div>
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  )}
-                </div>
 
-                {/* PDF Download Section */}
-                <div className="border-t pt-8 mt-8">
-                  <Button
-                     onClick={downloadPDF}
-                     disabled={isGeneratingPDF}
-                     className="w-full bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 py-6 text-lg"
-                   >
-                     {isGeneratingPDF ? (
-                      <>
-                        <span className="animate-spin mr-3">⏳</span>
-                        Genererer PDF...
-                      </>
-                    ) : (
-                      <>
-                        <span className="mr-3">📄</span>
-                        Last ned sammendrag (PDF)
-                      </>
+                        {/* Word list */}
+                        {textAnalysis.ordliste && textAnalysis.ordliste.length > 0 && (
+                          <div>
+                            <h4 className="text-md font-semibold mb-2">Stavefeil</h4>
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                  <thead>
+                                    <tr className="border-b border-blue-300">
+                                      <th className="text-left py-2 px-3 font-semibold text-red-700">Feil</th>
+                                      <th className="text-left py-2 px-3 font-semibold text-green-700">Riktig</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {textAnalysis.ordliste.map((ord, index) => (
+                                      <tr key={index} className="border-b border-blue-200 last:border-b-0">
+                                        <td className="py-2 px-3 text-red-600 font-medium">{ord.feil}</td>
+                                        <td className="py-2 px-3 text-green-600 font-medium">{ord.riktig}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {textAnalysis.ordliste && textAnalysis.ordliste.length === 0 && (
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                            <p className="text-sm text-gray-700">🎉 Ingen stavefeil funnet!</p>
+                          </div>
+                        )}
+                      </div>
                     )}
-                  </Button>
+                  </div>
+
+                  {/* PDF Download Section */}
+                  <div className="border-t pt-8 mt-8">
+                    <Button
+                      onClick={downloadPDF}
+                      disabled={isGeneratingPDF}
+                      className="w-full bg-white hover:bg-gray-50 text-gray-900 border border-gray-300 py-6 text-lg"
+                    >
+                      {isGeneratingPDF ? (
+                        <>
+                          <span className="animate-spin mr-3">⏳</span>
+                          Genererer PDF...
+                        </>
+                      ) : (
+                        <>
+                          <span className="mr-3">📄</span>
+                          Last ned sammendrag (PDF)
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-      
-      <Confetti isVisible={showConfetti} onComplete={() => setShowConfetti(false)} />
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        <Confetti isVisible={showConfetti} onComplete={() => setShowConfetti(false)} />
       </div>
     </div>
   )

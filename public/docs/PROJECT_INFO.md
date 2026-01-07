@@ -98,7 +98,7 @@ standalone-spraakhjelper/
    - Lydeffekter ved riktig svar
 
 3. **Flerspråklig støtte**
-   - 15 ulike morsmål
+   - 18 ulike morsmål
    - Forklaringer oversatt til brukerens morsmål
 
 4. **Navigasjon og oversikt**
