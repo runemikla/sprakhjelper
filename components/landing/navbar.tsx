@@ -19,7 +19,7 @@ export function Navbar() {
       const { data: { user } } = await supabase.auth.getUser()
       setIsLoggedIn(!!user)
     }
-    
+
     checkAuth()
 
     // Listen for auth changes
@@ -68,21 +68,21 @@ export function Navbar() {
 
           {/* Desktop Navigation Links */}
           <div className="hidden md:flex items-center gap-8">
-            <a 
-              href="/spraakhjelper" 
+            <a
+              href="/spraakhjelper"
               onClick={handleSpraakhjelperClick}
               className="text-gray-700 hover:text-blue-600 transition-colors font-medium cursor-pointer"
             >
               Språkhjelperen
             </a>
-            <Link 
-              href="/lærerveiledning" 
+            <Link
+              href="/laererveiledning"
               className="text-gray-700 hover:text-blue-600 transition-colors font-medium"
             >
               Lærerveiledning
             </Link>
-            <Link 
-              href="/om" 
+            <Link
+              href="/om"
               className="text-gray-700 hover:text-blue-600 transition-colors font-medium"
             >
               Om språkhjelperen
@@ -128,8 +128,8 @@ export function Navbar() {
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-gray-200">
             <div className="flex flex-col space-y-4">
-              <a 
-                href="/spraakhjelper" 
+              <a
+                href="/spraakhjelper"
                 onClick={(e) => {
                   handleSpraakhjelperClick(e)
                   setMobileMenuOpen(false)
@@ -138,15 +138,15 @@ export function Navbar() {
               >
                 Språkhjelperen
               </a>
-              <Link 
-                href="/lærerveiledning" 
+              <Link
+                href="/laererveiledning"
                 className="text-gray-700 hover:text-blue-600 transition-colors font-medium px-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Lærerveiledning
               </Link>
-              <Link 
-                href="/om" 
+              <Link
+                href="/om"
                 className="text-gray-700 hover:text-blue-600 transition-colors font-medium px-2"
                 onClick={() => setMobileMenuOpen(false)}
               >

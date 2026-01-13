@@ -39,8 +39,8 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'", // unsafe-inline needed for Tailwind
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
-      // Allow Supabase (with specific URL + wildcard) and AI APIs
-      "connect-src 'self' https://ntkmouxfvzrxanolnmke.supabase.co https://*.supabase.co https://api.openai.com https://*.openai.azure.com",
+      // Allow Supabase (with specific URL + wildcard) and Azure OpenAI
+      "connect-src 'self' https://ntkmouxfvzrxanolnmke.supabase.co https://*.supabase.co https://*.openai.azure.com",
       "media-src 'self' data:",
       "object-src 'none'",
       "base-uri 'self'",

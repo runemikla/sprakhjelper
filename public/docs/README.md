@@ -5,7 +5,7 @@ En selvstending Next.js-applikasjon som hjelper brukere med å lære norsk ved h
 ## ✨ Funksjoner
 
 - 📝 **Språkanalyse**: AI-drevet analyse av norsk tekst
-- 🤖 **Fleksibel AI**: Velg mellom OpenAI eller Azure OpenAI
+- 🤖 **Azure AI**: Bruker Azure OpenAI for sikker og pålitelig AI-analyse
 - 🌍 **Flerspråklig støtte**: Forklaringer på 18 ulike morsmål
 - 🎯 **Interaktiv læring**: Prøv å korrigere setninger og få umiddelbar tilbakemelding
 - 📊 **Statistikk**: Se fremgang og nøyaktighet
@@ -18,7 +18,7 @@ En selvstending Next.js-applikasjon som hjelper brukere med å lære norsk ved h
 ### Forutsetninger
 
 - Node.js 18+ installert
-- En OpenAI API-nøkkel ([få din her](https://platform.openai.com/api-keys)) **ELLER** Azure OpenAI-tilgang
+- Azure OpenAI-tilgang
 - pnpm (anbefalt) eller npm
 
 ### Installasjon
@@ -39,25 +39,7 @@ En selvstending Next.js-applikasjon som hjelper brukere med å lære norsk ved h
    
    Opprett en `.env.local` fil i prosjektets rotmappe:
    
-   **For OpenAI:**
    ```bash
-   OPENAI_API_KEY=sk-your-actual-api-key-here
-   ```
-   
-   **For Azure OpenAI:**
-   ```bash
-   AZURE_OPENAI_ENDPOINT=https://your-resource-name.openai.azure.com
-   AZURE_OPENAI_API_KEY=your_azure_openai_api_key_here
-   AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o
-   AZURE_OPENAI_API_VERSION=2024-08-01-preview
-   ```
-   
-   **For begge:**
-   ```bash
-   # OpenAI
-   OPENAI_API_KEY=sk-your-actual-api-key-here
-   
-   # Azure OpenAI
    AZURE_OPENAI_ENDPOINT=https://your-resource-name.openai.azure.com
    AZURE_OPENAI_API_KEY=your_azure_openai_api_key_here
    AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o
@@ -89,7 +71,7 @@ pnpm start
 - **Framework**: Next.js 15 (App Router)
 - **Styling**: Tailwind CSS
 - **UI Komponenter**: shadcn/ui (Radix UI)
-- **AI**: OpenAI GPT-4o / Azure OpenAI
+- **AI**: Azure OpenAI
 - **Validering**: Zod
 - **Notifikasjoner**: Sonner (toast)
 - **Markdown**: react-markdown
@@ -100,10 +82,11 @@ pnpm start
 standalone-spraakhjelper/
 ├── app/
 │   ├── api/
-│   │   ├── spraakhjelper/
-│   │   │   └── route.ts         # API-endepunkt for OpenAI
-│   │   └── spraakhjelper-azure/
-│   │       └── route.ts         # API-endepunkt for Azure OpenAI
+│   │   ├── spraakhjelper-azure/
+│   │   │   └── route.ts         # API-endepunkt for Azure OpenAI
+│   │   ├── check-sentence-azure/
+│   │   ├── split-sentences-azure/
+│   │   └── generate-summary-azure/
 │   ├── globals.css              # Global styling
 │   ├── layout.tsx               # Root layout
 │   └── page.tsx                 # Hovedside
@@ -148,8 +131,7 @@ Språkhjelperen støtter forklaringer på følgende morsmål:
 
 ## 💡 Bruk
 
-1. **Velg AI-leverandør**: Velg mellom OpenAI eller Azure OpenAI
-2. **Velg morsmål**: Velg ditt morsmål fra nedtrekkslisten
+1. **Velg morsmål**: Velg ditt morsmål fra nedtrekkslisten
 3. **Skriv tekst**: Lim inn eller skriv norsk tekst du vil få hjelp med
 4. **Analyser**: Klikk "Analyser tekst" for å få AI-analyse
 5. **Bla gjennom**: Gå gjennom hver setning for å se tilbakemeldinger
@@ -159,31 +141,18 @@ Språkhjelperen støtter forklaringer på følgende morsmål:
 ## 🔒 Sikkerhet og personvern
 
 - **Ingen database**: All data lagres kun i nettleseren din (localStorage)
-- **Privacy-first**: Teksten din sendes kun til OpenAI for analyse
-- **API-nøkkel**: Din OpenAI API-nøkkel lagres kun på serveren (ikke i nettleseren)
+- **Privacy-first**: Teksten din sendes kun til Azure OpenAI for analyse
+- **API-nøkkel**: Din Azure OpenAI API-nøkkel lagres kun på serveren (ikke i nettleseren)
 
 ## ⚙️ Konfigurasjon
 
-### Velg AI-leverandør
-
-Applikasjonen støtter nå to AI-leverandører:
-
-- **OpenAI**: Direkte tilgang til OpenAI's API
-- **Azure OpenAI**: Enterprise-løsning med Azure-hosting
+### Azure OpenAI Oppsett
 
 Se [AZURE_SETUP.md](./AZURE_SETUP.md) for detaljert informasjon om Azure-oppsett.
 
 ### Tilpass AI-modellen
 
-**For OpenAI** (`app/api/spraakhjelper/route.ts`):
-```typescript
-const response = await openai.chat.completions.create({
-  model: 'gpt-4o',  // Endre til 'gpt-4o-mini' for raskere/billigere svar
-  // ...
-});
-```
-
-**For Azure OpenAI** (`.env.local`):
+I `.env.local`:
 ```bash
 AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o  # Endre til din deployment
 ```
@@ -212,9 +181,9 @@ Dette er et standalone prosjekt. For forbedringer:
 
 ## ❓ Feilsøking
 
-### "Empty response from OpenAI"
-- Sjekk at din OpenAI API-nøkkel er gyldig
-- Sjekk at du har kreditt igjen på OpenAI-kontoen din
+### "Empty response from Azure OpenAI"
+- Sjekk at din Azure OpenAI API-nøkkel er gyldig
+- Sjekk at AZURE_OPENAI_ENDPOINT og AZURE_OPENAI_DEPLOYMENT_NAME er korrekt konfigurert
 
 ### Komponenter vises ikke riktig
 - Kjør `pnpm install` på nytt
