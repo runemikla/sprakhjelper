@@ -179,29 +179,18 @@ const TRANSFER_ERRORS: Record<string, string> = {
   • Verb-bøying, spesielt i fortid`
 };
 
-export async function POST(req: Request) {
-  try {
-    // Rate limiting: 10 requests per minute per IP
-    const rateLimitError = checkRateLimit(req, 10, 60000);
-    if (rateLimitError) return rateLimitError;
+// Helper: Validate Azure configuration
+function validateAzureConfig() {
+  if (!AZURE_ENDPOINT || !AZURE_API_KEY) {
+    throw new Error('Azure OpenAI configuration missing. Please set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY in .env');
+  }
+}
 
-    // Validate Azure configuration
-    if (!AZURE_ENDPOINT || !AZURE_API_KEY) {
-      throw new Error('Azure OpenAI configuration missing. Please set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY in .env');
-    }
+// Helper: Build system prompt
+function buildSystemPrompt(morsmaal: string): string {
+  const transferErrors = TRANSFER_ERRORS[morsmaal] || '';
 
-    // Parse and validate input
-    const body = await req.json();
-    const { text, morsmaal } = spraakhjelpperSchema.parse(body);
-
-    console.log('Processing spraakhjelper request for language:', morsmaal);
-    console.log('Using Azure OpenAI endpoint:', AZURE_ENDPOINT);
-
-    // Get transfer errors for this specific language
-    const transferErrors = TRANSFER_ERRORS[morsmaal] || '';
-
-    // Build system prompt (v5)
-    const systemPrompt = `Du er en hjelpsom språkveileder for elever som lærer norsk. Skriv på bokmål og ${morsmaal}. Bruk enkelt, tydelig og muntlig språk – som til en venn – men med riktig grammatikk. Skriv korte setninger og forklar én ting om gangen. Bruk bare enkle grammatikkord som «verb» eller «ordstilling». Dersom du bruker et grammatikkbegrep i en forklaring, forklar det kort hver gang, eller så lenge det ikke er brukt tidligere i denne samtalen.
+  return String.raw`Du er en hjelpsom språkveileder for elever som lærer norsk. Skriv på bokmål og ${morsmaal}. Bruk enkelt, tydelig og muntlig språk – som til en venn – men med riktig grammatikk. Skriv korte setninger og forklar én ting om gangen. Bruk bare enkle grammatikkord som «verb» eller «ordstilling». Dersom du bruker et grammatikkbegrep i en forklaring, forklar det kort hver gang, eller så lenge det ikke er brukt tidligere i denne samtalen.
 Unngå vanskelige ord og faguttrykk. Når du forklarer feil, bruk små eksempler for å illustrere hva eleven skal gjøre for å forbedre setningen sin. Vær særlig oppmerksom på vanlige utfordringer eller overføringsfeil for elever med ${morsmaal} som morsmål.
 
 ##Fremgangsmåte
@@ -229,7 +218,7 @@ Eksempel 1:
     {
       "bruker_setning": "Hu går til skole.",
       "riktig_setning": "Hun går til skolen.",
-      "forklaring": "1. **Hu -> Hun:** På norsk skriver vi «hun» i stedet for «hu».\\n 2. **Skole -> Skolen:** Du skrev: «går til skole». Det er nesten riktig. Men vi sier «til skolen».",
+      "forklaring": "1. **Hu -> Hun:** På norsk skriver vi «hun» i stedet for «hu».\n 2. **Skole -> Skolen:** Du skrev: «går til skole». Det er nesten riktig. Men vi sier «til skolen».",
       "forklaring_morsmaal": "...oversatt til ${morsmaal}",
       "setning_status": "feil"
     }
@@ -242,7 +231,7 @@ Eksempel 2:
     {
       "bruker_setning": "Om sommeren jeg reiser Thailand på ferie.",
       "riktig_setning": "Om sommeren reiser jeg til Thailand på ferie.",
-      "forklaring": "1. **jeg reiser -> reiser jeg: ** Verbet «reiser» skal stå på plass nummer to i setningen. Dette følger V2-regelen, som sier at verbet skal stå i den andre posisjonen i setningen.\\n 2. **Til Thailand -> til Thailand:** Husk å ta med preposisjonen «til» for å vise hvor du reiser: «til Thailand».",
+      "forklaring": "1. **jeg reiser -> reiser jeg: ** Verbet «reiser» skal stå på plass nummer to i setningen. Dette følger V2-regelen, som sier at verbet skal stå i den andre posisjonen i setningen.\n 2. **Til Thailand -> til Thailand:** Husk å ta med preposisjonen «til» for å vise hvor du reiser: «til Thailand».",
       "forklaring_morsmaal": "...oversatt til ${morsmaal}",
       "setning_status": "feil"
     }
@@ -274,84 +263,136 @@ Eksempel 4:
     }
   ]
 }`;
+}
 
-    // Define JSON Schema for structured output (Azure requires object at top level)
-    const responseSchema = {
-      type: "object",
-      properties: {
-        sentences: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              bruker_setning: {
-                type: "string",
-                description: "Den opprinnelige setningen slik eleven skrev den."
-              },
-              riktig_setning: {
-                type: "string",
-                description: "Setningen omskrevet korrekt."
-              },
-              forklaring: {
-                type: "string",
-                description: "Punktvis forklaring på norsk hva som er galt og hvorfor."
-              },
-              forklaring_morsmaal: {
-                type: "string",
-                description: `Forklaringen oversatt til ${morsmaal}.`
-              },
-              setning_status: {
-                type: "string",
-                enum: ["riktig", "feil"],
-                description: "Status 'riktig' hvis setningen er korrekt (ignorer tegnsetting). Godta a/en-endelser og a/et-endelser i verb."
-              }
+// Helper: Build response schema
+function buildResponseSchema(morsmaal: string) {
+  return {
+    type: "object",
+    properties: {
+      sentences: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            bruker_setning: {
+              type: "string",
+              description: "Den opprinnelige setningen slik eleven skrev den."
             },
-            required: ["bruker_setning", "riktig_setning", "forklaring", "forklaring_morsmaal", "setning_status"],
-            additionalProperties: false
-          }
+            riktig_setning: {
+              type: "string",
+              description: "Setningen omskrevet korrekt."
+            },
+            forklaring: {
+              type: "string",
+              description: "Punktvis forklaring på norsk hva som er galt og hvorfor."
+            },
+            forklaring_morsmaal: {
+              type: "string",
+              description: `Forklaringen oversatt til ${morsmaal}.`
+            },
+            setning_status: {
+              type: "string",
+              enum: ["riktig", "feil"],
+              description: "Status 'riktig' hvis setningen er korrekt (ignorer tegnsetting). Godta a/en-endelser og a/et-endelser i verb."
+            }
+          },
+          required: ["bruker_setning", "riktig_setning", "forklaring", "forklaring_morsmaal", "setning_status"],
+          additionalProperties: false
         }
-      },
-      required: ["sentences"],
-      additionalProperties: false
-    };
-
-    // Build Azure OpenAI URL
-    const azureUrl = `${AZURE_ENDPOINT}/openai/deployments/${AZURE_DEPLOYMENT_NAME}/chat/completions?api-version=${AZURE_API_VERSION}`;
-
-    // Make API call to Azure OpenAI with structured output
-    console.log('Calling Azure OpenAI with structured output...');
-    const response = await fetch(azureUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'api-key': AZURE_API_KEY,
-      },
-      body: JSON.stringify({
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Tekst fra eleven: ${text}` }
-        ],
-        temperature: 0,
-        max_tokens: 4000,
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "sentence_analysis",
-            strict: true,
-            schema: responseSchema
-          }
-        }
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      // Secure logging: Only log status code, never full error data
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Azure OpenAI error status:', response.status);
       }
-      throw new Error(`Azure OpenAI API error: ${response.status} ${response.statusText}`);
+    },
+    required: ["sentences"],
+    additionalProperties: false
+  };
+}
+
+// Helper: Call Azure OpenAI API
+async function callAzureOpenAI(systemPrompt: string, text: string, responseSchema: any) {
+  const azureUrl = `${AZURE_ENDPOINT}/openai/deployments/${AZURE_DEPLOYMENT_NAME}/chat/completions?api-version=${AZURE_API_VERSION}`;
+
+  console.log('Calling Azure OpenAI with structured output...');
+  const response = await fetch(azureUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'api-key': AZURE_API_KEY,
+    },
+    body: JSON.stringify({
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Tekst fra eleven: ${text}` }
+      ],
+      temperature: 0,
+      max_tokens: 4000,
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "sentence_analysis",
+          strict: true,
+          schema: responseSchema
+        }
+      }
+    }),
+  });
+
+  if (!response.ok) {
+    // Secure logging: Only log status code, never full error data
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Azure OpenAI error status:', response.status);
     }
+    throw new Error(`Azure OpenAI API error: ${response.status} ${response.statusText}`);
+  }
+
+  return response;
+}
+
+// Helper: Process sentences and add metadata
+function processSentences(sentences: any[], submissionId: string) {
+  return sentences.map((sentenceObj: any, index: number) => {
+    let forklaring = sentenceObj.forklaring;
+    let forklaringMorsmaal = sentenceObj.forklaring_morsmaal;
+
+    // If sentence is correct but no explanation, provide positive feedback
+    if (sentenceObj.setning_status === 'riktig' && (!forklaring || forklaring.trim() === '')) {
+      forklaring = 'Denne setningen er riktig! Godt jobbet! 🎉';
+    }
+
+    if (sentenceObj.setning_status === 'riktig' && (!forklaringMorsmaal || forklaringMorsmaal.trim() === '')) {
+      forklaringMorsmaal = forklaring;
+    }
+
+    return {
+      ...sentenceObj,
+      forklaring,
+      forklaring_morsmaal: forklaringMorsmaal,
+      sentence_id: `${submissionId}-${index}`,
+    };
+  });
+}
+
+export async function POST(req: Request) {
+  try {
+    // Rate limiting: 10 requests per minute per IP
+    const rateLimitError = checkRateLimit(req, 10, 60000);
+    if (rateLimitError) return rateLimitError;
+
+    // Validate Azure configuration
+    validateAzureConfig();
+
+    // Parse and validate input
+    const body = await req.json();
+    const { text, morsmaal } = spraakhjelpperSchema.parse(body);
+
+    console.log('Processing spraakhjelper request for language:', morsmaal);
+    console.log('Using Azure OpenAI endpoint:', AZURE_ENDPOINT);
+
+    // Build system prompt and response schema
+    const systemPrompt = buildSystemPrompt(morsmaal);
+    const responseSchema = buildResponseSchema(morsmaal);
+
+    // Call Azure OpenAI API
+    const response = await callAzureOpenAI(systemPrompt, text, responseSchema);
 
     const data = await response.json();
     const aiResponse = data.choices?.[0]?.message?.content?.trim();
@@ -375,26 +416,7 @@ Eksempel 4:
     const submissionId = `azure-${Date.now()}-${crypto.randomUUID()}`;
 
     // Add sentence_id and handle edge cases
-    const resultsWithStatus = sentences.map((sentenceObj: any, index: number) => {
-      let forklaring = sentenceObj.forklaring;
-      let forklaringMorsmaal = sentenceObj.forklaring_morsmaal;
-
-      // If sentence is correct but no explanation, provide positive feedback
-      if (sentenceObj.setning_status === 'riktig' && (!forklaring || forklaring.trim() === '')) {
-        forklaring = 'Denne setningen er riktig! Godt jobbet! 🎉';
-      }
-
-      if (sentenceObj.setning_status === 'riktig' && (!forklaringMorsmaal || forklaringMorsmaal.trim() === '')) {
-        forklaringMorsmaal = forklaring;
-      }
-
-      return {
-        ...sentenceObj,
-        forklaring,
-        forklaring_morsmaal: forklaringMorsmaal,
-        sentence_id: `${submissionId}-${index}`,
-      };
-    });
+    const resultsWithStatus = processSentences(sentences, submissionId);
 
     return NextResponse.json({
       success: true,
@@ -420,12 +442,16 @@ Eksempel 4:
       );
     }
 
+    // Determine error message based on environment
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const errorMessage = isDevelopment
+      ? (error instanceof Error ? error.message : 'Unknown error')
+      : 'An error occurred processing your request';
+
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: process.env.NODE_ENV === 'development'
-          ? (error instanceof Error ? error.message : 'Unknown error')
-          : 'An error occurred processing your request'
+        message: errorMessage
       },
       { status: 500 }
     );

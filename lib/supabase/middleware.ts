@@ -38,8 +38,26 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims()
   const user = data?.claims
 
+  // Define public paths that don't require authentication
+  const publicPaths = [
+    '/',
+    '/login',
+    '/auth',
+    '/api',
+  ]
+
+  const isPublicPath = publicPaths.some(path =>
+    request.nextUrl.pathname === path ||
+    request.nextUrl.pathname.startsWith(path + '/')
+  )
+
+  // Only redirect to login if:
+  // 1. User is not authenticated
+  // 2. Path is not public
+  // 3. Path is not already login/auth related
   if (
     !user &&
+    !isPublicPath &&
     !request.nextUrl.pathname.startsWith('/login') &&
     !request.nextUrl.pathname.startsWith('/auth')
   ) {

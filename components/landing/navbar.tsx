@@ -43,7 +43,7 @@ export function Navbar() {
   const handleSpraakhjelperClick = (e: React.MouseEvent) => {
     e.preventDefault()
     // Clear sessionStorage
-    if (typeof window !== 'undefined') {
+    if (globalThis.window !== undefined) {
       sessionStorage.clear()
     }
     // Navigate to spraakhjelper page
