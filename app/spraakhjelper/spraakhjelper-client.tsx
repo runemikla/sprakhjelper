@@ -8,8 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { ChevronLeft, ChevronRight, Languages, Copy, BarChart3, Volume2, VolumeX } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Copy, BarChart3, Volume2, VolumeX } from 'lucide-react'
 import { toast } from 'sonner'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -19,6 +18,9 @@ import { useAudio } from '@/hooks/use-audio'
 import { Navbar } from '@/components/landing/navbar'
 import { sanitizeMarkdown } from '@/lib/sanitize'
 import { fetchWithTimeout } from '@/lib/fetch-with-timeout'
+import { PieChart } from '@/components/spraakhjelper/pie-chart'
+import { MarkdownParagraph, MarkdownStrong, MarkdownLink } from '@/components/spraakhjelper/markdown-renderers'
+import { MarkdownUnorderedList, MarkdownListItem, MarkdownAnchorWithValidation, MarkdownParagraphInline } from '@/components/spraakhjelper/markdown-analysis-renderers'
 
 interface SentenceResult {
   bruker_setning: string;
@@ -98,7 +100,7 @@ interface SpraakhjelpperClientProps {
   }
 }
 
-export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps) {
+export default function SpraakhjelpperClient({ user }: Readonly<SpraakhjelpperClientProps>) {
   const [inputValue, setInputValue] = useState('')
   const [selectedLanguage, setSelectedLanguage] = useState<string>('')
 
@@ -115,7 +117,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
   const [showNorwegianExplanation, setShowNorwegianExplanation] = useState(true)
 
   // Teacher selection - randomly chosen on component mount, persists through session
-  const [teacherVersion, setTeacherVersion] = useState<1 | 2>(() => {
+  const [teacherVersion] = useState<1 | 2>(() => {
     // Randomly select teacher 1 or 2 on first load
     return Math.random() < 0.5 ? 1 : 2
   })
@@ -281,14 +283,14 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
     // Clear all sessionStorage data
     sessionStorage.clear()
     // Refresh the page to reset everything
-    window.location.reload()
+    globalThis.location.reload()
   }
 
   const currentSentence = result?.results[currentSentenceIndex]
 
   // Sync retryInput with currentSentence.bruker_setning when it changes
   useEffect(() => {
-    if (currentSentence && currentSentence.setning_status === 'feil') {
+    if (currentSentence?.setning_status === 'feil') {
       console.log('useEffect: Syncing retryInput with currentSentence.bruker_setning:', currentSentence.bruker_setning)
       setRetryInput(currentSentence.bruker_setning)
     }
@@ -311,6 +313,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
       await navigator.clipboard.writeText(text)
       toast.success('Tekst kopiert!')
     } catch (err) {
+      console.error('Clipboard error:', err)
       toast.error('Kunne ikke kopiere teksten')
     }
   }
@@ -408,11 +411,6 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
     return { totalSentences, correctSentences, correctedSentences, correctPercentage }
   }
 
-  const getCorrectedText = () => {
-    if (!result?.results) return ''
-    return result.results.map(s => s.riktig_setning).join(' ')
-  }
-
   const getUserCorrectedText = () => {
     if (!result?.results) return ''
     return result.results.map(s => s.bruker_setning).join(' ')
@@ -430,61 +428,22 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
           bgColor: 'bg-gray-50 border-gray-200',
           copyText: result.originalText
         }
-      case 'user':
+      case 'user': {
+        const userText = getUserCorrectedText()
+        const hasCorrections = userText !== result.originalText
         return {
-          text: getUserCorrectedText(),
+          text: userText,
           title: 'Din tekst (med dine korrigeringer)',
-          description: getUserCorrectedText() !== result.originalText
+          description: hasCorrections
             ? '💡 Denne teksten oppdateres når du korrigerer setninger'
             : 'Du har ikke gjort noen korrigeringer ennå',
           bgColor: 'bg-blue-50 border-blue-200',
-          copyText: getUserCorrectedText()
+          copyText: userText
         }
+      }
       default:
         return { text: '', title: '', description: '', bgColor: '', copyText: '' }
     }
-  }
-
-  const PieChart = () => {
-    const stats = getStatistics()
-    const radius = 45
-    const circumference = 2 * Math.PI * radius
-
-    const originalCorrectPercentage = stats.totalSentences > 0 ? (stats.correctSentences / stats.totalSentences) * 100 : 0
-    const correctedPercentage = stats.totalSentences > 0 ? (stats.correctedSentences / stats.totalSentences) * 100 : 0
-    const totalCorrectPercentage = originalCorrectPercentage + correctedPercentage
-
-    const originalStrokeDasharray = circumference
-    const originalStrokeDashoffset = circumference - (originalCorrectPercentage / 100) * circumference
-
-    return (
-      <div className="relative w-32 h-32 mx-auto">
-        <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r={radius} fill="none" stroke="#e5e7eb" strokeWidth="8" />
-          <circle
-            cx="50" cy="50" r={radius} fill="none" stroke="#10b981" strokeWidth="8"
-            strokeLinecap="round" strokeDasharray={originalStrokeDasharray}
-            strokeDashoffset={originalStrokeDashoffset}
-            className="transition-all duration-500"
-          />
-          {correctedPercentage > 0 && (
-            <circle
-              cx="50" cy="50" r={radius} fill="none" stroke="#3b82f6" strokeWidth="8"
-              strokeLinecap="round"
-              strokeDasharray={`${(correctedPercentage / 100) * circumference} ${circumference}`}
-              className="transition-all duration-500"
-              style={{
-                transform: `rotate(${(originalCorrectPercentage / 100) * 360}deg)`,
-                transformOrigin: '50% 50%'
-              }}
-            />
-          )}
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-lg font-bold text-gray-700">{Math.round(totalCorrectPercentage)}%</span>
-        </div>
-      </div>
-    )
   }
 
   const formatExplanation = (text: string | undefined | null) => {
@@ -492,13 +451,14 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
       return [{ number: '1.', content: 'Ingen forklaring tilgjengelig' }]
     }
 
-    const normalizedText = text.replace(/\/n/g, '\n').replace(/\\n/g, '\n')
+    const normalizedText = text.replaceAll('/n', '\n').replaceAll(String.raw`\n`, '\n')
     const parts = normalizedText.split(/(?=\d+\.\s)/).filter(part => part.trim().length > 0)
     const formattedPoints = []
 
     for (const part of parts) {
       const trimmedPart = part.trim()
-      const match = trimmedPart.match(/^(\d+\.\s*)(.*)$/)
+      const regex = /^(\d+\.\s*)(.*)$/
+      const match = regex.exec(trimmedPart)
       if (match) {
         const [, number, content] = match
         formattedPoints.push({ number: number.trim(), content: content.trim() })
@@ -514,7 +474,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
 
   // Generate and download PDF
   const downloadPDF = async () => {
-    if (!result || !result.originalText || !result.results) {
+    if (!result?.originalText || !result?.results) {
       toast.error('Ingen data å laste ned')
       return
     }
@@ -591,9 +551,9 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
       addText(result.originalText, 10, false)
       addSpace(15)
 
-      // Corrected Text
-      const correctedText = result.results.map(r => r.riktig_setning).join(' ')
-      addText('Korrigert versjon', 16, true, [31, 41, 55])
+      // Corrected Text (user's version with corrections)
+      const correctedText = getUserCorrectedText()
+      addText('Din korrigerte tekst', 16, true, [31, 41, 55])
       addSpace(5)
       addText(correctedText, 10, false)
       addSpace(15)
@@ -649,7 +609,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
 
   // Generate text analysis
   const generateTextAnalysis = async () => {
-    if (!result || !result.originalText || !result.morsmaal) {
+    if (!result?.originalText || !result?.morsmaal) {
       toast.error('Ingen tekst å analysere')
       return
     }
@@ -671,7 +631,9 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
       }, 45000)
 
       if (!response.ok) {
-        throw new Error('Failed to generate analysis')
+        const errorData = await response.json().catch(() => ({}))
+        const errorMessage = errorData.message || errorData.error || `HTTP ${response.status}: ${response.statusText}`
+        throw new Error(errorMessage)
       }
 
       const data: AnalysisResult = await response.json()
@@ -722,7 +684,11 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
               {/* Mini Header */}
               <div className="px-6 pt-6 pb-4 border-b border-gray-200">
                 <div className="flex items-start justify-between">
-                  <div className="cursor-pointer hover:opacity-80 transition-opacity flex-1" onClick={showInputForm}>
+                  <button
+                    type="button"
+                    className="cursor-pointer hover:opacity-80 transition-opacity flex-1 text-left bg-transparent border-none p-0"
+                    onClick={showInputForm}
+                  >
                     <div className="flex items-center gap-1.5 mb-1">
                       <Image src="/images/sprakhjelper_logo.png" alt="Språkhjelperen" width={36} height={36} className="object-contain" />
                       <h2 className="text-2xl font-bold text-gray-900">Språkhjelperen</h2>
@@ -730,7 +696,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
                     <p className="text-sm text-gray-600">
                       Få tilbakemeldinger fra KI på teksten din.
                     </p>
-                  </div>
+                  </button>
                   {/* Sound toggle button */}
                   <button
                     onClick={(e) => {
@@ -829,7 +795,11 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
               {/* Mini Header */}
               <div className="px-6 pt-6 pb-4 border-b border-gray-200">
                 <div className="flex items-start justify-between">
-                  <div className="cursor-pointer hover:opacity-80 transition-opacity flex-1" onClick={showInputForm}>
+                  <button
+                    type="button"
+                    className="cursor-pointer hover:opacity-80 transition-opacity flex-1 text-left bg-transparent border-none p-0"
+                    onClick={showInputForm}
+                  >
                     <div className="flex items-center gap-1.5 mb-1">
                       <Image src="/images/sprakhjelper_logo.png" alt="Språkhjelperen" width={36} height={36} className="object-contain" />
                       <h2 className="text-2xl font-bold text-gray-900">Språkhjelperen</h2>
@@ -837,7 +807,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
                     <p className="text-sm text-gray-600">
                       Få tilbakemeldinger fra KI på teksten din.
                     </p>
-                  </div>
+                  </button>
                   {/* Sound toggle button */}
                   <button
                     onClick={(e) => {
@@ -870,7 +840,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
                     <h3 className="font-semibold mb-3 text-blue-900">Setninger funnet:</h3>
                     <div className="space-y-3">
                       {editableSentences.map((sentence, index) => (
-                        <div key={index} className="flex items-start gap-2">
+                        <div key={`sentence-${index}-${sentence.substring(0, 20)}`} className="flex items-start gap-2">
                           <span className="font-semibold text-blue-700 mt-2.5 flex-shrink-0">{index + 1}.</span>
                           <Input
                             value={sentence}
@@ -906,7 +876,11 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
               {/* Mini Header */}
               <div className="px-6 pt-6 pb-4 border-b border-gray-200">
                 <div className="flex items-start justify-between">
-                  <div className="cursor-pointer hover:opacity-80 transition-opacity flex-1" onClick={showInputForm}>
+                  <button
+                    type="button"
+                    className="cursor-pointer hover:opacity-80 transition-opacity flex-1 text-left bg-transparent border-none p-0"
+                    onClick={showInputForm}
+                  >
                     <div className="flex items-center gap-1.5 mb-1">
                       <Image src="/images/sprakhjelper_logo.png" alt="Språkhjelperen" width={36} height={36} className="object-contain" />
                       <h2 className="text-2xl font-bold text-gray-900">Språkhjelperen</h2>
@@ -914,7 +888,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
                     <p className="text-sm text-gray-600">
                       Få tilbakemeldinger fra KI på teksten din.
                     </p>
-                  </div>
+                  </button>
                   {/* Sound toggle button */}
                   <button
                     onClick={(e) => {
@@ -940,12 +914,16 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
             </Card>
           )}
 
-          {result && result.results && result.results.length > 0 && !showSummary && currentSentence && (
+          {result?.results?.length && !showSummary && currentSentence && (
             <Card className="flex flex-col h-[calc(100vh-8rem)] bg-white/95 backdrop-blur-sm border-white/20 shadow-xl">
               {/* Mini Header */}
               <div className="px-6 pt-4 pb-4 border-b border-gray-200 flex-shrink-0">
                 <div className="flex items-start justify-between">
-                  <div className="cursor-pointer hover:opacity-80 transition-opacity flex-1" onClick={showInputForm}>
+                  <button
+                    type="button"
+                    className="cursor-pointer hover:opacity-80 transition-opacity flex-1 text-left bg-transparent border-none p-0"
+                    onClick={showInputForm}
+                  >
                     <div className="flex items-center gap-1.5 mb-1">
                       <Image src="/images/sprakhjelper_logo.png" alt="Språkhjelperen" width={36} height={36} className="object-contain" />
                       <h2 className="text-2xl font-bold text-gray-900">Språkhjelperen</h2>
@@ -953,7 +931,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
                     <p className="text-sm text-gray-600">
                       Få tilbakemeldinger fra KI på teksten din.
                     </p>
-                  </div>
+                  </button>
                   {/* Sound toggle button */}
                   <button
                     onClick={(e) => {
@@ -1039,16 +1017,14 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
                           size="sm"
                           onClick={() => setShowNorwegianExplanation(true)}
                         >
-                          <span className="mr-1">🇳🇴</span>
-                          Norsk
+                          <span className="mr-1">🇳🇴</span>Norsk
                         </Button>
                         <Button
-                          variant={!showNorwegianExplanation ? "default" : "outline"}
+                          variant={showNorwegianExplanation ? "outline" : "default"}
                           size="sm"
                           onClick={() => setShowNorwegianExplanation(false)}
                         >
-                          <span className="mr-1">{result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.flag : '🌐'}</span>
-                          {result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.name : 'Morsmål'}
+                          <span className="mr-1">{result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.flag : '🌐'}</span>{result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.name : 'Morsmål'}
                         </Button>
                       </div>
                     </div>
@@ -1058,7 +1034,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
                       <div className="space-y-2">
                         {formatExplanation(showNorwegianExplanation ? currentSentence.forklaring : currentSentence.forklaring_morsmaal)
                           .map((point, index) => (
-                            <div key={index} className="flex gap-2">
+                            <div key={`point-${point.number}-${point.content.substring(0, 20)}`} className="flex gap-2">
                               <span className={`font-medium flex-shrink-0 ${showNorwegianExplanation ? 'text-blue-700' : 'text-purple-700'
                                 }`}>
                                 {point.number}
@@ -1069,35 +1045,9 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
                                   disallowedElements={['script', 'iframe', 'object', 'embed', 'form', 'input']}
                                   unwrapDisallowed={true}
                                   components={{
-                                    p: ({ children }) => <span>{children}</span>,
-                                    strong: ({ children }) => <strong className="font-bold">{children}</strong>,
-                                    a: ({ children, href }) => {
-                                      // Sanitize URL to prevent XSS
-                                      const sanitizedHref = (() => {
-                                        if (!href) return '#';
-                                        // Only allow http/https URLs
-                                        try {
-                                          const url = new URL(href);
-                                          if (url.protocol === 'http:' || url.protocol === 'https:') {
-                                            return href;
-                                          }
-                                        } catch {
-                                          // Invalid URL
-                                        }
-                                        return '#';
-                                      })();
-
-                                      return (
-                                        <a
-                                          href={sanitizedHref}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="text-blue-600 hover:underline"
-                                        >
-                                          {children}
-                                        </a>
-                                      );
-                                    },
+                                    p: MarkdownParagraph,
+                                    strong: MarkdownStrong,
+                                    a: MarkdownLink,
                                   }}
                                 >
                                   {sanitizeMarkdown(point.content)}
@@ -1171,7 +1121,11 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
               {/* Mini Header */}
               <div className="px-6 pt-6 pb-4 border-b border-gray-200">
                 <div className="flex items-start justify-between">
-                  <div className="cursor-pointer hover:opacity-80 transition-opacity flex-1" onClick={showInputForm}>
+                  <button
+                    type="button"
+                    className="cursor-pointer hover:opacity-80 transition-opacity flex-1 text-left bg-transparent border-none p-0"
+                    onClick={showInputForm}
+                  >
                     <div className="flex items-center gap-1.5 mb-1">
                       <Image src="/images/sprakhjelper_logo.png" alt="Språkhjelperen" width={36} height={36} className="object-contain" />
                       <h2 className="text-2xl font-bold text-gray-900">Språkhjelperen</h2>
@@ -1179,7 +1133,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
                     <p className="text-sm text-gray-600">
                       Få tilbakemeldinger fra KI på teksten din.
                     </p>
-                  </div>
+                  </button>
                   {/* Sound toggle button */}
                   <button
                     onClick={(e) => {
@@ -1279,11 +1233,14 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
                     <div className="space-y-2">
                       <h3 className="text-lg font-semibold">Resultat</h3>
                       <div className="bg-gray-50 border rounded-lg p-4 flex flex-col items-center">
-                        <PieChart />
+                        <PieChart statistics={getStatistics()} />
                         <p className="text-sm text-gray-600 mt-3 text-center">
-                          {getStatistics().correctPercentage >= 80 ? '🎉 Flott jobbet!' :
-                            getStatistics().correctPercentage >= 60 ? '👍 Bra arbeid!' :
-                              '💪 Fortsett å øve!'}
+                          {(() => {
+                            const pct = getStatistics().correctPercentage
+                            if (pct >= 80) return '🎉 Flott jobbet!'
+                            if (pct >= 60) return '👍 Bra arbeid!'
+                            return '💪 Fortsett å øve!'
+                          })()}
                         </p>
                       </div>
                     </div>
@@ -1317,16 +1274,14 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
                             size="sm"
                             onClick={() => setShowAnalysisInNorwegian(true)}
                           >
-                            <span className="mr-1">🇳🇴</span>
-                            Norsk
+                            <span className="mr-1">🇳🇴</span>Norsk
                           </Button>
                           <Button
-                            variant={!showAnalysisInNorwegian ? "default" : "outline"}
+                            variant={showAnalysisInNorwegian ? "outline" : "default"}
                             size="sm"
                             onClick={() => setShowAnalysisInNorwegian(false)}
                           >
-                            <span className="mr-1">{result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.flag : '🌐'}</span>
-                            {result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.name : 'Morsmål'}
+                            <span className="mr-1">{result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.flag : '🌐'}</span>{result.morsmaal ? languages.find(lang => lang.code === result.morsmaal)?.name : 'Morsmål'}
                           </Button>
                         </div>
 
@@ -1354,21 +1309,10 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
                               <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
                                 components={{
-                                  a: ({ node, ...props }) => {
-                                    const href = props.href || '';
-                                    if (href.startsWith('http://') || href.startsWith('https://')) {
-                                      return <a {...props} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" />;
-                                    }
-                                    return <span>{props.children}</span>;
-                                  },
-                                  ul: ({ node, ...props }) => <ul className="space-y-1 list-none" {...props} />,
-                                  li: ({ node, ...props }) => (
-                                    <li className="flex gap-2" {...props}>
-                                      <span className="font-bold text-blue-700 flex-shrink-0">•</span>
-                                      <span className="flex-1">{props.children}</span>
-                                    </li>
-                                  ),
-                                  p: ({ node, ...props }) => <span {...props} />,
+                                  a: MarkdownAnchorWithValidation,
+                                  ul: MarkdownUnorderedList,
+                                  li: MarkdownListItem,
+                                  p: MarkdownParagraphInline,
                                 }}
                                 disallowedElements={['script', 'iframe', 'object', 'embed', 'form', 'input']}
                                 unwrapDisallowed={true}
@@ -1380,7 +1324,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
                         </div>
 
                         {/* Word list */}
-                        {textAnalysis.ordliste && textAnalysis.ordliste.length > 0 && (
+                        {textAnalysis?.ordliste?.length ? (
                           <div>
                             <h4 className="text-md font-semibold mb-2">Stavefeil</h4>
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -1394,7 +1338,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
                                   </thead>
                                   <tbody>
                                     {textAnalysis.ordliste.map((ord, index) => (
-                                      <tr key={index} className="border-b border-blue-200 last:border-b-0">
+                                      <tr key={`word-${ord.feil}-${ord.riktig}`} className="border-b border-blue-200 last:border-b-0">
                                         <td className="py-2 px-3 text-red-600 font-medium">{ord.feil}</td>
                                         <td className="py-2 px-3 text-green-600 font-medium">{ord.riktig}</td>
                                       </tr>
@@ -1404,9 +1348,9 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
                               </div>
                             </div>
                           </div>
-                        )}
+                        ) : null}
 
-                        {textAnalysis.ordliste && textAnalysis.ordliste.length === 0 && (
+                        {textAnalysis?.ordliste?.length === 0 && (
                           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
                             <p className="text-sm text-gray-700">🎉 Ingen stavefeil funnet!</p>
                           </div>
@@ -1424,13 +1368,11 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
                     >
                       {isGeneratingPDF ? (
                         <>
-                          <span className="animate-spin mr-3">⏳</span>
-                          Genererer PDF...
+                          <span className="animate-spin mr-3">⏳</span>Genererer PDF...
                         </>
                       ) : (
                         <>
-                          <span className="mr-3">📄</span>
-                          Last ned sammendrag (PDF)
+                          <span className="mr-3">📄</span>Last ned sammendrag (PDF)
                         </>
                       )}
                     </Button>

@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { updateSession } from '@/lib/supabase/middleware';
 
-export function middleware(request: NextRequest) {
-  const response = NextResponse.next();
-
+export async function middleware(request: NextRequest) {
   // HTTPS Enforcement (only in production)
   if (
     process.env.NODE_ENV === 'production' &&
@@ -14,6 +13,10 @@ export function middleware(request: NextRequest) {
     const url = request.url.replace('http://', 'https://');
     return NextResponse.redirect(url, 301);
   }
+
+  // IMPORTANT: Update Supabase session first to prevent "Invalid Refresh Token" errors
+  // This must happen before any other logic that depends on authentication
+  let response = await updateSession(request);
 
   // CORS Configuration
   const origin = request.headers.get('origin');
