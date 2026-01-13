@@ -101,7 +101,7 @@ interface SpraakhjelpperClientProps {
 export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps) {
   const [inputValue, setInputValue] = useState('')
   const [selectedLanguage, setSelectedLanguage] = useState<string>('')
-  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'azure'>('azure')
+
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // New: Split sentences state
@@ -177,8 +177,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
     setError(null)
 
     try {
-      // Choose API endpoint based on selected provider
-      const apiEndpoint = selectedProvider === 'azure' ? '/api/split-sentences-azure' : '/api/split-sentences';
+      const apiEndpoint = '/api/split-sentences-azure';
 
       const response = await fetchWithTimeout(apiEndpoint, {
         method: 'POST',
@@ -224,8 +223,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
     setActiveTextView('user')
 
     try {
-      // Choose API endpoint based on selected provider
-      const apiEndpoint = selectedProvider === 'azure' ? '/api/spraakhjelper-azure' : '/api/spraakhjelper';
+      const apiEndpoint = '/api/spraakhjelper-azure';
 
       // Use the editable sentences from user input
       const textToAnalyze = editableSentences.join(' ')
@@ -326,8 +324,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
     setIsCheckingAnswer(true)
 
     try {
-      // Choose API endpoint based on selected provider
-      const apiEndpoint = selectedProvider === 'azure' ? '/api/check-sentence-azure' : '/api/check-sentence';
+      const apiEndpoint = '/api/check-sentence-azure';
 
       const response = await fetchWithTimeout(apiEndpoint, {
         method: 'POST',
@@ -660,8 +657,7 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
     setIsGeneratingAnalysis(true)
 
     try {
-      // Choose API endpoint based on provider
-      const apiEndpoint = selectedProvider === 'azure' ? '/api/generate-summary-azure' : '/api/generate-summary'
+      const apiEndpoint = '/api/generate-summary-azure'
 
       const response = await fetchWithTimeout(apiEndpoint, {
         method: 'POST',
@@ -1075,16 +1071,33 @@ export default function SpraakhjelpperClient({ user }: SpraakhjelpperClientProps
                                   components={{
                                     p: ({ children }) => <span>{children}</span>,
                                     strong: ({ children }) => <strong className="font-bold">{children}</strong>,
-                                    a: ({ children, href }) => (
-                                      <a
-                                        href={href?.startsWith('http') ? href : '#'}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-blue-600 hover:underline"
-                                      >
-                                        {children}
-                                      </a>
-                                    ),
+                                    a: ({ children, href }) => {
+                                      // Sanitize URL to prevent XSS
+                                      const sanitizedHref = (() => {
+                                        if (!href) return '#';
+                                        // Only allow http/https URLs
+                                        try {
+                                          const url = new URL(href);
+                                          if (url.protocol === 'http:' || url.protocol === 'https:') {
+                                            return href;
+                                          }
+                                        } catch {
+                                          // Invalid URL
+                                        }
+                                        return '#';
+                                      })();
+
+                                      return (
+                                        <a
+                                          href={sanitizedHref}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-blue-600 hover:underline"
+                                        >
+                                          {children}
+                                        </a>
+                                      );
+                                    },
                                   }}
                                 >
                                   {sanitizeMarkdown(point.content)}

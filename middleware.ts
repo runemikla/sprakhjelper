@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
   const response = NextResponse.next();
-  
+
   // HTTPS Enforcement (only in production)
   if (
     process.env.NODE_ENV === 'production' &&
@@ -14,7 +14,7 @@ export function middleware(request: NextRequest) {
     const url = request.url.replace('http://', 'https://');
     return NextResponse.redirect(url, 301);
   }
-  
+
   // CORS Configuration
   const origin = request.headers.get('origin');
   const allowedOrigins = [
@@ -23,29 +23,43 @@ export function middleware(request: NextRequest) {
     // Add your production domain here
     // 'https://your-domain.com',
   ];
-  
+
   // For local network access (e.g., 192.168.x.x), allow local IPs
   const isLocalNetwork = origin?.match(/^http:\/\/(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+):\d+$/);
-  
+
   if (origin && (allowedOrigins.includes(origin) || isLocalNetwork)) {
     response.headers.set('Access-Control-Allow-Origin', origin);
   }
-  
+
   // CORS headers for preflight requests
   if (request.method === 'OPTIONS') {
     const preflightResponse = new NextResponse(null, { status: 200 });
-    preflightResponse.headers.set('Access-Control-Allow-Origin', origin || '*');
+
+    // Determine which origin to allow
+    let allowedOrigin = null;
+    if (origin && (allowedOrigins.includes(origin) || isLocalNetwork)) {
+      allowedOrigin = origin;
+    } else if (process.env.NODE_ENV === 'development') {
+      // In development, default to localhost if no origin matches
+      allowedOrigin = 'http://localhost:3000';
+    }
+
+    // Only set CORS header if we have a valid origin
+    if (allowedOrigin) {
+      preflightResponse.headers.set('Access-Control-Allow-Origin', allowedOrigin);
+    }
+
     preflightResponse.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     preflightResponse.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     preflightResponse.headers.set('Access-Control-Max-Age', '86400'); // 24 hours
     return preflightResponse;
   }
-  
+
   // Additional CORS headers
   response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   response.headers.set('Access-Control-Allow-Credentials', 'true');
-  
+
   return response;
 }
 
